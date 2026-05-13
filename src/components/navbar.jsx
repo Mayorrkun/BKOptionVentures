@@ -1,9 +1,10 @@
 import "../css/navbar.css";
+import Logo from "../Images/Logo/Logo.png"
 export default function Nav(){
     return (
         <nav className="navbar">
             <div className="logo">
-
+                <img src={Logo} alt=""/>
             </div>
 
             <ul>

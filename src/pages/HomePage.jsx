@@ -3,9 +3,9 @@ import Carousel from '../components/carousel.jsx';
 import '../css/homepage.css';
 
 import tent1 from '../Images/Tents/WhatsApp Image 2026-05-13 at 11.59.58 AM.jpeg';
-import chair1 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.03 PM.jpeg';
-import table1 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.07 PM.jpeg';
-import event1 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.00.12 PM.jpeg';
+import chair1 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.08.55 PM (2).jpeg';
+import table1 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.11 PM (1).jpeg';
+import event1 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.09.01 PM.jpeg';
 
 const categories = [
   { name: 'Canopies', img: tent1, query: 'Canopies', icon: '⛺' },

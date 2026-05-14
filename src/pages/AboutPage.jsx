@@ -76,23 +76,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="section">
-        <div className="container">
-          <h2 className="section-title">Meet Our Team</h2>
-          <p className="section-subtitle">The people who make every event possible</p>
-          <div className="team-grid">
-            {team.map(member => (
-              <div key={member.name} className="team-card card">
-                <div className="team-avatar">{member.emoji}</div>
-                <h4>{member.name}</h4>
-                <p>{member.title}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Why Choose Us */}
       <section className="section why-about-section">
         <div className="container">

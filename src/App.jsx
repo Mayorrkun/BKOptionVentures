@@ -1,14 +1,31 @@
-import Nav from "./components/navbar.jsx";
-import Carousel from "./components/carousel.jsx";
+import { Routes, Route } from 'react-router-dom';
+import Nav from './components/navbar.jsx';
+import Footer from './components/Footer.jsx';
+import HomePage from './pages/HomePage.jsx';
+import RentalsPage from './pages/RentalsPage.jsx';
+import SalesPage from './pages/SalesPage.jsx';
+import ProductDetailPage from './pages/ProductDetailPage.jsx';
+import AboutPage from './pages/AboutPage.jsx';
+import ContactPage from './pages/ContactPage.jsx';
+import AdminPage from './pages/AdminPage.jsx';
+
 function App() {
-
-
   return (
     <>
-      <Nav/>
-        <Carousel/>
+      <Nav />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/rentals" element={<RentalsPage />} />
+        <Route path="/rentals/:id" element={<ProductDetailPage type="rental" />} />
+        <Route path="/sales" element={<SalesPage />} />
+        <Route path="/sales/:id" element={<ProductDetailPage type="sale" />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+      </Routes>
+      <Footer />
     </>
-  )
+  );
 }
 
-export default App
+export default App;

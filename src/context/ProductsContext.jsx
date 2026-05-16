@@ -2,15 +2,23 @@ import { createContext, useContext, useState } from 'react';
 import { rentalProducts as initialRentals, salesProducts as initialSales } from '../data/products.js';
 
 const STORE_KEY = 'bk_products';
+const STORE_VERSION = 2; // bump whenever products.js seed data changes (e.g. image renames)
 
 function loadStore() {
   try {
     const saved = localStorage.getItem(STORE_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.version === STORE_VERSION) {
+        const { version: _, ...data } = parsed;
+        return data;
+      }
+      // version mismatch — fall through and re-seed
+    }
   } catch {}
-  const seed = { rentals: initialRentals, sales: initialSales };
+  const seed = { version: STORE_VERSION, rentals: initialRentals, sales: initialSales };
   try { localStorage.setItem(STORE_KEY, JSON.stringify(seed)); } catch {}
-  return seed;
+  return { rentals: initialRentals, sales: initialSales };
 }
 
 const ProductsContext = createContext(null);
@@ -19,7 +27,7 @@ export function ProductsProvider({ children }) {
   const [store, setStore] = useState(loadStore);
 
   function commit(next) {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(next)); } catch {}
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ version: STORE_VERSION, ...next })); } catch {}
     setStore(next);
   }
 

@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom';
 import Carousel from '../components/carousel.jsx';
 import '../css/homepage.css';
 
-import tent1 from '../Images/Tents/WhatsApp Image 2026-05-13 at 11.59.58 AM.jpeg';
-import chair1 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.08.55 PM (2).jpeg';
-import table1 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.11 PM (1).jpeg';
-import event1 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.09.01 PM.jpeg';
+import tent1 from '../Images/Tents/Tent1.jpeg';
+import chair1 from '../Images/ChairTableSets/ChairTable24.jpeg';
+import table1 from '../Images/ChairTableSets/ChairTable12.jpeg';
+import event1 from '../Images/EventSets/EventSet8.jpeg';
 
 const categories = [
   { name: 'Canopies', img: tent1, query: 'Canopies', icon: '⛺' },

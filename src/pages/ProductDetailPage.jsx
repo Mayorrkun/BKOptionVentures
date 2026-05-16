@@ -13,8 +13,7 @@ function formatPrice(p) {
 const TABS = ['Description', 'Specifications', 'Reviews'];
 
 const placeholderReviews = [
-  { name: 'Adaeze O.', rating: 5, text: 'Excellent service! The canopy was spotless and setup was so fast. Highly recommend.' },
-  { name: 'Emeka B.', rating: 5, text: 'Great value for money. Will definitely be using BK Option Ventures for my next event.' },
+  { name: 'Emeka B.', rating: 5, text: 'Great value for money. Will definitely be using BK Option Equipment Ventures for my next event.' },
   { name: 'Funmi A.', rating: 4, text: 'Very professional team. Delivery was on time and everything was in perfect condition.' },
 ];
 

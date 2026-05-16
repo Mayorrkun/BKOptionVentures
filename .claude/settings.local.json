@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command ' *)",
+      "Bash(dir \"C:\\\\Users\\\\MindsAuthor\\\\desktop\\\\bkoptionventures\\\\src\\\\Images\\\\ChairTableSets\" /b)"
+    ]
+  }
+}

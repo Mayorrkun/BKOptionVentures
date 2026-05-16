@@ -1,22 +1,22 @@
 //Canopies
-import tent1 from '../Images/Tents/WhatsApp Image 2026-05-13 at 11.59.58 AM.jpeg';
-import tent2 from '../Images/Tents/WhatsApp Image 2026-05-13 at 11.59.59 AM.jpeg';
-import tent3 from '../Images/Tents/WhatsApp Image 2026-05-13 at 12.00.01 PM (1).jpeg';
-import tent4 from '../Images/Tents/WhatsApp Image 2026-05-13 at 12.00.02 PM.jpeg';
-import tent5 from '../Images/Tents/WhatsApp Image 2026-05-13 at 12.08.08 PM.jpeg';
+import tent1 from '../Images/Tents/Tent1.jpeg';
+import tent2 from '../Images/Tents/Tent2.jpeg';
+import tent3 from '../Images/Tents/Tent3.jpeg';
+import tent4 from '../Images/Tents/Tent4.jpeg';
+import tent5 from '../Images/Tents/Tent6.jpeg';
 
 //chairs
-import chair1 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.03 PM.jpeg';
-import chair2 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.04 PM.jpeg';
-import chair3 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.07 PM.jpeg';
-import chair4 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.07.14 PM.jpeg';
-import chair5 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.07.20 PM.jpeg';
+import chair1 from '../Images/ChairTableSets/ChairTable1.jpeg';
+import chair2 from '../Images/ChairTableSets/ChairTable2.jpeg';
+import chair3 from '../Images/ChairTableSets/ChairTable5.jpeg';
+import chair4 from '../Images/ChairTableSets/ChairTable13.jpeg';
+import chair5 from '../Images/ChairTableSets/ChairTable14.jpeg';
 
 //tables
-import event1 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.00.12 PM.jpeg';
-import banquetTable1 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.08.52 PM.jpeg';
-import event3 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.08.54 PM (1).jpeg';
-import standFan from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.09.01 PM.jpeg';
+import event1 from '../Images/EventSets/EventSet1.jpeg';
+import banquetTable1 from '../Images/EventSets/EventSet2.jpeg';
+import event3 from '../Images/EventSets/EventSet3.jpeg';
+import standFan from '../Images/EventSets/EventSet8.jpeg';
 
 export const rentalProducts = [
   {

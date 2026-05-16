@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import logoSrc from '../../Images/Logo/Logo.png';
 import '../../css/admin.css';
 
 const DEFAULT_TERMS =
@@ -23,6 +24,53 @@ function dueDateStr() {
 
 function formatPrice(p) {
   return '₦' + (p || 0).toLocaleString('en-NG');
+}
+
+function statusBadgeColor(status) {
+  switch (status) {
+    case 'Paid':            return [16, 185, 129];
+    case 'Overdue':         return [239, 68, 68];
+    case 'Partially Paid':  return [20, 184, 166];
+    default:                return [249, 115, 22]; // Pending
+  }
+}
+
+function loadLogoBase64() {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width  = img.width;
+      canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(null);
+    img.src = logoSrc;
+  });
+}
+
+function numberToWords(amount) {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+    'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  function convert(n) {
+    if (n === 0) return '';
+    if (n < 20) return ones[n];
+    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+    if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + convert(n % 100) : '');
+    if (n < 1000000) return convert(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + convert(n % 1000) : '');
+    return convert(Math.floor(n / 1000000)) + ' Million' + (n % 1000000 ? ' ' + convert(n % 1000000) : '');
+  }
+
+  const naira = Math.floor(amount);
+  const kobo = Math.round((amount - naira) * 100);
+  let words = convert(naira) || 'Zero';
+  words += ' Naira';
+  if (kobo > 0) words += ' and ' + convert(kobo) + ' Kobo';
+  return words + ' Only';
 }
 
 // ── Line item row ──
@@ -74,6 +122,7 @@ export default function AdminInvoicePage() {
   const [notes, setNotes] = useState('');
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [nextId, setNextId] = useState(2);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const subtotal = useMemo(() => lineItems.reduce((s, i) => s + i.qty * i.unitPrice, 0), [lineItems]);
   const tax = subtotal * 0.075;
@@ -86,144 +135,207 @@ export default function AdminInvoicePage() {
   const updateLine = (id, data) => setLineItems(prev => prev.map(i => i.id === id ? data : i));
   const removeLine = id => setLineItems(prev => prev.filter(i => i.id !== id));
 
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
+  const generatePDF = async () => {
+    setPdfLoading(true);
+    try {
+      const logoBase64 = await loadLogoBase64();
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageW = 210;
+      const pageH = 297;
 
-    // ── Header ──
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('BK Option Equipment Ventures', 14, 20);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 100, 110);
-    doc.text('Lagos, Nigeria', 14, 27);
-    doc.text('Tel: +234 802 393 8469 | bkventure07@yahoo.com', 14, 33);
+      // ── Corner decorations (drawn first, behind content) ──
+      doc.setFillColor(249, 115, 22);
+      doc.circle(pageW + 12, -12, 38, 'F');   // orange top-right arc
+      doc.setFillColor(30, 58, 138);
+      doc.circle(-12, pageH + 12, 38, 'F');   // navy bottom-left arc
 
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INVOICE', pageW - 14, 20, { align: 'right' });
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 100, 110);
-    doc.text(`Invoice #: ${invoiceNo}`, pageW - 14, 27, { align: 'right' });
-    doc.text(`Date: ${invoiceDate}`, pageW - 14, 33, { align: 'right' });
-    doc.text(`Due Date: ${dueDate}`, pageW - 14, 39, { align: 'right' });
-    doc.setTextColor(0, 0, 0);
-
-    // ── Divider ──
-    doc.setDrawColor(220, 225, 235);
-    doc.setLineWidth(0.5);
-    doc.line(14, 45, pageW - 14, 45);
-
-    // ── Bill To ──
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Bill To:', 14, 53);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(customer.name || 'N/A', 14, 60);
-    if (customer.email) doc.text(customer.email, 14, 66);
-    if (customer.phone) doc.text(customer.phone, 14, 72);
-    if (customer.address) doc.text(customer.address, 14, 78);
-
-    // ── Payment status badge ──
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 100, 110);
-    doc.text(`Payment Status: ${status}`, pageW - 14, 60, { align: 'right' });
-    doc.setTextColor(0, 0, 0);
-
-    // ── Line items table ──
-    autoTable(doc, {
-      startY: 88,
-      head: [['Description', 'Qty', 'Unit Price', 'Total']],
-      body: lineItems.map(i => [
-        i.description || '—',
-        i.qty,
-        i.unitPrice.toLocaleString('en-NG'),
-        (i.qty * i.unitPrice).toLocaleString('en-NG'),
-      ]),
-      styles: { fontSize: 10, cellPadding: 5 },
-      headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 249, 252] },
-      columnStyles: {
-        0: { cellWidth: 85 },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 38, halign: 'right' },
-        3: { cellWidth: 38, halign: 'right' },
-      },
-    });
-
-    const tableBottomY = doc.lastAutoTable.finalY;
-
-    // ── Totals box (right-aligned, contained) ──
-    const boxW = 90;
-    const boxX = pageW - 14 - boxW;
-    const boxPad = 7;
-    const lineGap = 8;
-    const boxH = boxPad + lineGap + lineGap + 6 + 10 + boxPad; // padding + sub + tax + divider + total + padding
-    const boxY = tableBottomY + 12;
-
-    // Background fill
-    // doc.setFillColor(248, 249, 252);
-    // doc.roundedRect(boxX, boxY, boxW, boxH, 2, 2, 'F');
-
-    // Border
-    // doc.setDrawColor(218, 224, 235);
-    // doc.setLineWidth(0.3);
-    // doc.roundedRect(boxX, boxY, boxW, boxH, 2, 2, 'S');
-
-    // Subtotal row
-    const y1 = boxY + boxPad + lineGap;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(90, 95, 105);
-    doc.text('Subtotal', boxX + boxPad, y1);
-    doc.text(formatPrice(subtotal), boxX + boxW - boxPad, y1, { align: 'right' });
-
-    // Tax row
-    const y2 = y1 + lineGap;
-    doc.text('Tax (7.5%)', boxX + boxPad, y2);
-    doc.text(formatPrice(tax), boxX + boxW - boxPad, y2, { align: 'right' });
-
-    // Separator
-    const divY = y2 + 5;
-    doc.setDrawColor(210, 215, 225);
-    doc.line(boxX + boxPad, divY, boxX + boxW - boxPad, divY);
-
-    // Total row
-    const y3 = divY + 9;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(30, 58, 138);
-    doc.text('Total', boxX + boxPad, y3);
-    doc.text(formatPrice(total), boxX + boxW - boxPad, y3, { align: 'right' });
-
-    // Reset text style
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-
-    // ── Terms & Conditions ──
-    const termsY = boxY + boxH + 14;
-    if (terms) {
-      doc.setFontSize(9);
+      // ── Logo + Company name ──
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', 12, 10, 30, 10);
+      }
       doc.setFont('helvetica', 'bold');
-      doc.text('Terms & Conditions:', 14, termsY);
+      doc.setFontSize(13);
+      doc.setTextColor(30, 58, 138);
+      doc.text('BK OPTION EQUIPMENT VENTURES', 46, 18);
+
+      // ── Address block (right side) ──
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(30, 58, 138);
+      doc.text('Address:', pageW - 12, 14, { align: 'right' });
       doc.setFont('helvetica', 'normal');
-      const splitTerms = doc.splitTextToSize(terms, pageW - 28);
-      doc.text(splitTerms, 14, termsY + 7);
+      doc.setTextColor(50, 50, 60);
+      doc.text('20, Daddy Adediran Street,', pageW - 12, 20, { align: 'right' });
+      doc.text('Ire-Akari Estate, Isolo.', pageW - 12, 26, { align: 'right' });
+      doc.text('Tel/WA: 08023938469, 08080861728', pageW - 12, 32, { align: 'right' });
+      doc.text('Email: bkventure07@yahoo.com', pageW - 12, 38, { align: 'right' });
+
+      // ── Divider line ──
+      doc.setDrawColor(30, 58, 138);
+      doc.setLineWidth(0.5);
+      doc.line(12, 44, pageW - 12, 44);
+
+      // ── RE: INVOICE label ──
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(249, 115, 22);
+      doc.text('RE: INVOICE', 12, 54);
+      doc.setDrawColor(249, 115, 22);
+      doc.setLineWidth(0.5);
+      doc.line(12, 56, 64, 56);
+
+      // ── Invoice number ──
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(90, 95, 110);
+      doc.text(invoiceNo, 12, 63);
+
+      // ── Date / Issued To row ──
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(90, 95, 110);
+      doc.text('Date Issued:', 12, 72);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(25, 25, 35);
+      doc.text(invoiceDate, 44, 72);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(90, 95, 110);
+      doc.text('Due Date:', 12, 79);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(25, 25, 35);
+      doc.text(dueDate, 44, 79);
+
+      const midX = pageW / 2 + 10;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(30, 58, 138);
+      doc.text('Issued To:', midX, 68);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(25, 25, 35);
+      doc.text(customer.name || '—', midX, 75);
+      if (customer.phone) {
+        doc.setFontSize(8.5);
+        doc.text(customer.phone, midX, 81);
+      }
+
+      // ── Payment status badge ──
+      const badgeRGB = statusBadgeColor(status);
+      doc.setFillColor(...badgeRGB);
+      doc.roundedRect(pageW - 56, 63, 44, 10, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.text(status.toUpperCase(), pageW - 34, 69.5, { align: 'center' });
+
+      // ── Line items table ──
+      autoTable(doc, {
+        startY: 90,
+        head: [['S/N', 'DESCRIPTION OF GOODS', 'QTY', 'RATE', 'SUBTOTAL']],
+        body: lineItems.map((item, idx) => [
+          idx + 1,
+          item.description || '—',
+          item.qty,
+          item.unitPrice.toLocaleString('en-NG'),
+          (item.qty * item.unitPrice).toLocaleString('en-NG'),
+        ]),
+        foot: [
+          [
+            { content: '', colSpan: 3 },
+            { content: 'Subtotal', styles: { halign: 'right', fontStyle: 'normal', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
+            { content: formatPrice(subtotal), styles: { halign: 'right', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
+          ],
+          [
+            { content: '', colSpan: 3 },
+            { content: 'Tax (7.5%)', styles: { halign: 'right', fontStyle: 'normal', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
+            { content: formatPrice(tax), styles: { halign: 'right', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
+          ],
+          [
+            { content: 'GRAND TOTAL', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255], fontSize: 10 } },
+            { content: formatPrice(total), styles: { halign: 'right', fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255], fontSize: 10 } },
+          ],
+        ],
+        styles: { fontSize: 9, cellPadding: 5, textColor: [25, 25, 35] },
+        headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+        footStyles: { fontSize: 9 },
+        alternateRowStyles: { fillColor: [248, 249, 252] },
+        columnStyles: {
+          0: { cellWidth: 14, halign: 'center' },
+          1: { cellWidth: 80 },
+          2: { cellWidth: 16, halign: 'center' },
+          3: { cellWidth: 38, halign: 'right' },
+          4: { cellWidth: 38, halign: 'right' },
+        },
+        margin: { left: 12, right: 12 },
+      });
+
+      const tableBottomY = doc.lastAutoTable.finalY;
+
+      // ── Amount in Words ──
+      const awY = tableBottomY + 12;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(30, 58, 138);
+      doc.text('Amount in Words:', 12, awY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(50, 50, 60);
+      const words = numberToWords(total);
+      const splitWords = doc.splitTextToSize(words, pageW - 24);
+      doc.text(splitWords, 12, awY + 6);
+
+      const nairaLineY = awY + 6 + splitWords.length * 5 + 4;
+      doc.setDrawColor(90, 95, 110);
+      doc.setLineWidth(0.3);
+      doc.line(12, nairaLineY, pageW - 12, nairaLineY);
+      doc.setFontSize(8);
+      doc.setTextColor(90, 95, 110);
+      const nairaAmt = Math.floor(total);
+      const koboAmt  = Math.round((total - nairaAmt) * 100);
+      doc.text(`Naira: ${nairaAmt.toLocaleString('en-NG')}`, 12, nairaLineY + 5);
+      doc.text(`Kobo: ${String(koboAmt).padStart(2, '0')}`, pageW - 12, nairaLineY + 5, { align: 'right' });
+
+      // ── Terms & Conditions ──
+      if (terms) {
+        const termsY = nairaLineY + 14;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(30, 58, 138);
+        doc.text('Terms & Conditions:', 12, termsY);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(90, 95, 110);
+        const splitTerms = doc.splitTextToSize(terms, pageW - 24);
+        doc.text(splitTerms, 12, termsY + 5);
+      }
+
+      // ── Signature lines ──
+      const sigY = pageH - 30;
+      doc.setDrawColor(30, 58, 138);
+      doc.setLineWidth(0.4);
+      doc.line(12, sigY, 80, sigY);
+      doc.line(pageW - 80, sigY, pageW - 12, sigY);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(50, 50, 60);
+      doc.text("Customer's Signature", 12, sigY + 5);
+      doc.text('Authorized Signature', pageW - 12, sigY + 5, { align: 'right' });
+
+      // ── Orange footer line + company text ──
+      doc.setDrawColor(249, 115, 22);
+      doc.setLineWidth(0.8);
+      doc.line(12, pageH - 12, pageW - 12, pageH - 12);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(90, 95, 110);
+      doc.text(
+        'BK Option Equipment Ventures  ·  Lagos, Nigeria  ·  +234 802 393 8469  ·  bkventure07@yahoo.com',
+        pageW / 2, pageH - 7, { align: 'center' }
+      );
+
+      doc.save(`${invoiceNo}.pdf`);
+    } finally {
+      setPdfLoading(false);
     }
-
-    // ── Footer ──
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(130, 130, 140);
-    doc.text('Thank you for your business!', pageW / 2, pageH - 15, { align: 'center' });
-
-    doc.save(`${invoiceNo}.pdf`);
   };
 
   const saveDraft = () => {
@@ -344,7 +456,13 @@ export default function AdminInvoicePage() {
         {/* Actions */}
         <div className="admin-actions">
           <button className="btn btn-secondary btn-lg" onClick={saveDraft}>Save Draft</button>
-          <button className="btn btn-primary btn-lg" onClick={generatePDF}>⬇ Generate PDF</button>
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={generatePDF}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? 'Generating...' : '⬇ Generate PDF'}
+          </button>
         </div>
       </div>
     </main>

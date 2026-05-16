@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useProducts } from '../../context/ProductsContext.jsx';
+import { compressImage } from '../../utils/imageUtils.js';
 import '../../css/admin.css';
 import '../../css/adminProducts.css';
 
@@ -17,7 +18,7 @@ function emptyForm(type) {
     price: '',
     description: '',
     specs: '',
-    imageUrl: '',
+    imagePreview: null,
     stock: '',
   };
 }
@@ -35,7 +36,7 @@ function ProductForm({ type, initial, onSave, onCancel }) {
         price: initial.price != null ? String(initial.price) : '',
         description: initial.description || '',
         specs: Array.isArray(initial.specs) ? initial.specs.join('\n') : '',
-        imageUrl: initial.images?.[0] || '',
+        imagePreview: null,
         stock: initial.stock != null ? String(initial.stock) : '',
       };
     }
@@ -43,6 +44,17 @@ function ProductForm({ type, initial, onSave, onCancel }) {
   });
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  async function handleFileChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      set('imagePreview', compressed);
+    } catch {
+      alert('Could not process image. Please try a different file.');
+    }
+  }
 
   const handleSave = () => {
     if (!form.name.trim()) { alert('Product name is required.'); return; }
@@ -56,7 +68,7 @@ function ProductForm({ type, initial, onSave, onCancel }) {
       priceUnit: type === 'rental' ? 'per day' : 'each',
       description: form.description.trim(),
       specs: form.specs.split('\n').map(s => s.trim()).filter(Boolean),
-      images: form.imageUrl.trim() ? [form.imageUrl.trim()] : (initial?.images || []),
+      images: form.imagePreview ? [form.imagePreview] : (initial?.images || []),
       ...(type === 'sale' ? { stock: form.stock === '' ? 0 : +form.stock } : {}),
     };
 
@@ -123,13 +135,36 @@ function ProductForm({ type, initial, onSave, onCancel }) {
           />
         </div>
         <div className="form-group pf-full">
-          <label>Image URL <span className="form-hint">(optional — leave blank to keep existing)</span></label>
-          <input
-            type="url"
-            value={form.imageUrl}
-            onChange={e => set('imageUrl', e.target.value)}
-            placeholder="https://example.com/product.jpg"
-          />
+          <label>Product Image</label>
+          <div className="image-upload-zone">
+            {(form.imagePreview || initial?.images?.[0]) && (
+              <div className="image-preview-wrap">
+                <img
+                  src={form.imagePreview || initial.images[0]}
+                  alt="Preview"
+                  className="image-upload-preview"
+                />
+                {form.imagePreview && (
+                  <button
+                    type="button"
+                    className="image-clear-btn"
+                    onClick={() => set('imagePreview', null)}
+                    title="Remove uploaded image"
+                  >✕</button>
+                )}
+              </div>
+            )}
+            <label className="image-upload-btn">
+              {form.imagePreview ? 'Replace Image' : (initial?.images?.[0] ? 'Replace Image' : 'Upload Image')}
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+            </label>
+            <span className="form-hint">JPG, PNG, or WebP — auto-compressed to ≤ 800px</span>
+          </div>
         </div>
       </div>
       <div className="product-form-actions">

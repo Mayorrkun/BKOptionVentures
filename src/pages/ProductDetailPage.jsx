@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { rentalProducts, salesProducts } from '../data/products.js';
+import { useProducts } from '../context/ProductsContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import Breadcrumb from '../components/Breadcrumb.jsx';
 import ProductCard from '../components/ProductCard.jsx';
@@ -22,6 +22,7 @@ export default function ProductDetailPage({ type }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { rentalProducts, salesProducts } = useProducts();
 
   const products = type === 'rental' ? rentalProducts : salesProducts;
   const product = products.find(p => p.id === id);

@@ -99,14 +99,14 @@ export default function ContactPage() {
                 <span className="info-icon">📞</span>
                 <div>
                   <strong>Phone</strong>
-                  <p><a href="tel:+2348000000000">+234 800 000 0000</a></p>
+                  <p><a href="tel:+2348023938469">+234 802 393 8469</a></p>
                 </div>
               </li>
               <li>
                 <span className="info-icon">✉️</span>
                 <div>
                   <strong>Email</strong>
-                  <p><a href="mailto:info@bkoption.com">info@bkoption.com</a></p>
+                  <p><a href="mailto:bkventure07@yahoo.com">bkventure07@yahoo.com</a></p>
                 </div>
               </li>
               <li>

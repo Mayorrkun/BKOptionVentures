@@ -1,19 +1,22 @@
+//Canopies
 import tent1 from '../Images/Tents/WhatsApp Image 2026-05-13 at 11.59.58 AM.jpeg';
 import tent2 from '../Images/Tents/WhatsApp Image 2026-05-13 at 11.59.59 AM.jpeg';
 import tent3 from '../Images/Tents/WhatsApp Image 2026-05-13 at 12.00.01 PM (1).jpeg';
 import tent4 from '../Images/Tents/WhatsApp Image 2026-05-13 at 12.00.02 PM.jpeg';
 import tent5 from '../Images/Tents/WhatsApp Image 2026-05-13 at 12.08.08 PM.jpeg';
 
+//chairs
 import chair1 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.03 PM.jpeg';
 import chair2 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.04 PM.jpeg';
 import chair3 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.00.07 PM.jpeg';
 import chair4 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.07.14 PM.jpeg';
 import chair5 from '../Images/ChairTableSets/WhatsApp Image 2026-05-13 at 12.07.20 PM.jpeg';
 
+//tables
 import event1 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.00.12 PM.jpeg';
-import event2 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.08.52 PM.jpeg';
+import banquetTable1 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.08.52 PM.jpeg';
 import event3 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.08.54 PM (1).jpeg';
-import event4 from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.09.01 PM.jpeg';
+import standFan from '../Images/EventSets/WhatsApp Image 2026-05-13 at 12.09.01 PM.jpeg';
 
 export const rentalProducts = [
   {
@@ -52,14 +55,14 @@ export const rentalProducts = [
   },
   {
     id: 'r3',
-    name: 'Plastic Chairs (set of 10)',
+    name: 'Lounge Chairs',
     category: 'Chairs',
     price: 5000,
     priceUnit: 'per day',
     description:
-      'Sturdy, stackable plastic chairs available in white. Ideal for outdoor and indoor events.',
+      'A set of comfy sofa chairs perfect for Lounges and small gatherings',
     specs: [
-      'Quantity: 10 chairs per set',
+      'Quantity: ',
       'Colour: White',
       'Material: Heavy-duty plastic',
       'Max load: 120 kg per chair',
@@ -68,7 +71,7 @@ export const rentalProducts = [
   },
   {
     id: 'r4',
-    name: 'Banquet Chairs (set of 10)',
+    name: 'Banquet Chairs',
     category: 'Chairs',
     price: 10000,
     priceUnit: 'per day',
@@ -80,11 +83,11 @@ export const rentalProducts = [
       'Padding: White cushion',
       'Max load: 150 kg per chair',
     ],
-    images: [chair3, chair4],
+    images: [chair4],
   },
   {
     id: 'r5',
-    name: 'Round Tables (set of 5)',
+    name: 'Banquet Tables (set of 5)',
     category: 'Tables',
     price: 8000,
     priceUnit: 'per day',
@@ -96,23 +99,23 @@ export const rentalProducts = [
       'Seats: 8–10 per table',
       'Height: 76 cm',
     ],
-    images: [chair5, event1],
+    images: [banquetTable1],
   },
   {
     id: 'r6',
-    name: 'Rectangular Tables (set of 5)',
+    name: 'Round Tables (set of 5)',
     category: 'Tables',
     price: 7000,
     priceUnit: 'per day',
     description:
-      'Versatile rectangular tables for buffet lines, gift tables, or banquet seating.',
+      'Versatile round tables for buffet lines, gift tables, or banquet seating.',
     specs: [
       'Quantity: 5 tables per set',
       'Size: 183 cm × 76 cm (6 ft)',
       'Seats: 6–8 per table',
       'Height: 76 cm',
     ],
-    images: [event2, event3],
+    images: [banquetTable1],
   },
   {
     id: 'r7',
@@ -128,7 +131,7 @@ export const rentalProducts = [
       'Speeds: 3',
       'Blade diameter: 45 cm',
     ],
-    images: [event4, tent1],
+    images: [standFan, tent1],
   },
   {
     id: 'r8',
@@ -145,23 +148,6 @@ export const rentalProducts = [
       'Installation included',
     ],
     images: [tent2, tent3],
-  },
-  {
-    id: 'r9',
-    name: 'Full Event Set (Canopy + Tables + Chairs)',
-    category: 'Canopies',
-    price: 65000,
-    priceUnit: 'per day',
-    description:
-      'Complete event package: one large 20×20 canopy, 10 round tables, and 100 banquet chairs. Best value for large events.',
-    specs: [
-      '1× Large Canopy (20×20 ft)',
-      '10× Round Tables',
-      '100× Banquet Chairs',
-      'Full setup & takedown',
-      'Delivery within Lagos',
-    ],
-    images: [event1, event2, event3, event4],
   },
 ];
 
@@ -207,7 +193,7 @@ export const salesProducts = [
     priceUnit: 'each',
     description: '6-foot rectangular folding table. Multipurpose for events, offices, and markets.',
     specs: ['Size: 183 × 76 cm', 'Height: 76 cm', 'Foldable legs', 'Material: Steel + MDF top'],
-    images: [event2, event3],
+    images: [banquetTable1, event3],
     stock: 35,
   },
   {
@@ -218,7 +204,7 @@ export const salesProducts = [
     priceUnit: 'each',
     description: 'Brand new industrial-grade standing fan. Energy-efficient with 3-speed motor.',
     specs: ['Height: Adjustable 100–130 cm', 'Power: 120W', 'Speeds: 3', 'Blade: 45 cm'],
-    images: [event4, tent1],
+    images: [tent1],
     stock: 15,
   },
 ];

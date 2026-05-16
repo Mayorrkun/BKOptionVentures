@@ -1,11 +1,8 @@
 import { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ADMIN_PASSWORD } from '../config.js';
-import { rentalProducts, salesProducts } from '../data/products.js';
-import '../css/admin.css';
+import '../../css/admin.css';
 
-const ALL_PRODUCTS = [...rentalProducts, ...salesProducts];
 const DEFAULT_TERMS =
   'Payment due within 7 days of invoice date. Late payments are subject to a 5% monthly interest charge. Equipment remains the property of BK Option Ventures until full payment is received.';
 
@@ -28,71 +25,17 @@ function formatPrice(p) {
   return '₦' + (p || 0).toLocaleString('en-NG');
 }
 
-// ── Login ──
-function LoginModal({ onSuccess }) {
-  const [pw, setPw] = useState('');
-  const [err, setErr] = useState('');
-
-  const attempt = () => {
-    if (pw === ADMIN_PASSWORD) {
-      sessionStorage.setItem('adminAuth', 'true');
-      onSuccess();
-    } else {
-      setErr('Incorrect password.');
-    }
-  };
-
-  return (
-    <div className="admin-login-overlay">
-      <div className="admin-login-box">
-        <h2>Admin Login</h2>
-        <p>Enter your password to access the CEO dashboard.</p>
-        <div className="form-group mt-16">
-          <input
-            type="password"
-            placeholder="Password"
-            value={pw}
-            onChange={e => { setPw(e.target.value); setErr(''); }}
-            onKeyDown={e => e.key === 'Enter' && attempt()}
-            autoFocus
-          />
-          {err && <span className="error-msg">{err}</span>}
-        </div>
-        <button className="btn btn-primary btn-md" style={{ width: '100%' }} onClick={attempt}>
-          Login
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ── Line item row ──
 function LineItemRow({ item, onChange, onRemove }) {
-  const selected = ALL_PRODUCTS.find(p => p.id === item.productId);
   return (
     <tr>
       <td>
-        {/*<select*/}
-        {/*  value={item.productId}*/}
-        {/*  onChange={e => {*/}
-        {/*    const prod = ALL_PRODUCTS.find(p => p.id === e.target.value);*/}
-        {/*    onChange({ ...item, productId: e.target.value, description: prod?.name || '', unitPrice: prod?.price || 0 });*/}
-        {/*  }}*/}
-        {/*>*/}
-        {/*  <option value="">— Select product —</option>*/}
-        {/*  {ALL_PRODUCTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}*/}
-        {/*  <option value="custom">+ Custom Item</option>*/}
-        {/*</select>*/}
-        {/*{item.productId === 'custom' && (*/}
-        {/*  <input*/}
-        {/*    type="text"*/}
-        {/*    placeholder="Item description"*/}
-        {/*    value={item.description}*/}
-        {/*    onChange={e => onChange({ ...item, description: e.target.value })}*/}
-        {/*    className="custom-desc-input"*/}
-        {/*  />*/}
-        {/*)}*/}
-          <input type="text"/>
+        <input
+          type="text"
+          value={item.description}
+          onChange={e => onChange({ ...item, description: e.target.value })}
+          placeholder="Item description"
+        />
       </td>
       <td>
         <input
@@ -120,13 +63,13 @@ function LineItemRow({ item, onChange, onRemove }) {
   );
 }
 
-// ── Main dashboard ──
-function Dashboard() {
+// ── Invoice dashboard ──
+export default function AdminInvoicePage() {
   const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '' });
   const [invoiceNo] = useState(generateInvoiceNumber);
   const [invoiceDate] = useState(todayStr);
   const [dueDate] = useState(dueDateStr);
-  const [lineItems, setLineItems] = useState([{ id: 1, productId: '', description: '', qty: 1, unitPrice: 0 }]);
+  const [lineItems, setLineItems] = useState([{ id: 1, description: '', qty: 1, unitPrice: 0 }]);
   const [status, setStatus] = useState('Pending');
   const [notes, setNotes] = useState('');
   const [terms, setTerms] = useState(DEFAULT_TERMS);
@@ -137,7 +80,7 @@ function Dashboard() {
   const total = subtotal + tax;
 
   const addLine = () => {
-    setLineItems(prev => [...prev, { id: nextId, productId: '', description: '', qty: 1, unitPrice: 0 }]);
+    setLineItems(prev => [...prev, { id: nextId, description: '', qty: 1, unitPrice: 0 }]);
     setNextId(n => n + 1);
   };
   const updateLine = (id, data) => setLineItems(prev => prev.map(i => i.id === id ? data : i));
@@ -146,30 +89,36 @@ function Dashboard() {
   const generatePDF = () => {
     const doc = new jsPDF();
     const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
 
-    // Header
+    // ── Header ──
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('BK Option Ventures', 14, 20);
+    doc.text('BK Option Equipment Ventures', 14, 20);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 110);
     doc.text('Lagos, Nigeria', 14, 27);
-    doc.text('Tel: +234 800 000 0000 | info@bkoption.com', 14, 33);
+    doc.text('Tel: +234 802 393 8469 | bkventure07@yahoo.com', 14, 33);
 
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text('INVOICE', pageW - 14, 20, { align: 'right' });
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 110);
     doc.text(`Invoice #: ${invoiceNo}`, pageW - 14, 27, { align: 'right' });
     doc.text(`Date: ${invoiceDate}`, pageW - 14, 33, { align: 'right' });
     doc.text(`Due Date: ${dueDate}`, pageW - 14, 39, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
 
-    // Divider
+    // ── Divider ──
+    doc.setDrawColor(220, 225, 235);
     doc.setLineWidth(0.5);
     doc.line(14, 45, pageW - 14, 45);
 
-    // Bill To
+    // ── Bill To ──
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('Bill To:', 14, 53);
@@ -180,49 +129,99 @@ function Dashboard() {
     if (customer.phone) doc.text(customer.phone, 14, 72);
     if (customer.address) doc.text(customer.address, 14, 78);
 
-    // Status
+    // ── Payment status badge ──
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 110);
     doc.text(`Payment Status: ${status}`, pageW - 14, 60, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
 
-    // Line items table
+    // ── Line items table ──
     autoTable(doc, {
       startY: 88,
-      head: [['Description', 'Qty', 'Unit Price (₦)', 'Total (₦)']],
+      head: [['Description', 'Qty', 'Unit Price', 'Total']],
       body: lineItems.map(i => [
         i.description || '—',
         i.qty,
-        (i.unitPrice).toLocaleString('en-NG'),
+        i.unitPrice.toLocaleString('en-NG'),
         (i.qty * i.unitPrice).toLocaleString('en-NG'),
       ]),
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [30, 58, 138] },
-      columnStyles: { 0: { cellWidth: 80 } },
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 249, 252] },
+      columnStyles: {
+        0: { cellWidth: 85 },
+        1: { cellWidth: 20, halign: 'center' },
+        2: { cellWidth: 38, halign: 'right' },
+        3: { cellWidth: 38, halign: 'right' },
+      },
     });
 
-    const finalY = doc.lastAutoTable.finalY + 10;
+    const tableBottomY = doc.lastAutoTable.finalY;
 
-    // Totals
-    doc.setFontSize(10);
-    doc.text(`Subtotal: ${formatPrice(subtotal)}`, pageW - 14, finalY, { align: 'right' });
-    doc.text(`Tax (7.5%): ${formatPrice(tax)}`, pageW - 14, finalY + 7, { align: 'right' });
+    // ── Totals box (right-aligned, contained) ──
+    const boxW = 90;
+    const boxX = pageW - 14 - boxW;
+    const boxPad = 7;
+    const lineGap = 8;
+    const boxH = boxPad + lineGap + lineGap + 6 + 10 + boxPad; // padding + sub + tax + divider + total + padding
+    const boxY = tableBottomY + 12;
+
+    // Background fill
+    // doc.setFillColor(248, 249, 252);
+    // doc.roundedRect(boxX, boxY, boxW, boxH, 2, 2, 'F');
+
+    // Border
+    // doc.setDrawColor(218, 224, 235);
+    // doc.setLineWidth(0.3);
+    // doc.roundedRect(boxX, boxY, boxW, boxH, 2, 2, 'S');
+
+    // Subtotal row
+    const y1 = boxY + boxPad + lineGap;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(90, 95, 105);
+    doc.text('Subtotal', boxX + boxPad, y1);
+    doc.text(formatPrice(subtotal), boxX + boxW - boxPad, y1, { align: 'right' });
+
+    // Tax row
+    const y2 = y1 + lineGap;
+    doc.text('Tax (7.5%)', boxX + boxPad, y2);
+    doc.text(formatPrice(tax), boxX + boxW - boxPad, y2, { align: 'right' });
+
+    // Separator
+    const divY = y2 + 5;
+    doc.setDrawColor(210, 215, 225);
+    doc.line(boxX + boxPad, divY, boxX + boxW - boxPad, divY);
+
+    // Total row
+    const y3 = divY + 9;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text(`Total: ${formatPrice(total)}`, pageW - 14, finalY + 16, { align: 'right' });
+    doc.setFontSize(11);
+    doc.setTextColor(30, 58, 138);
+    doc.text('Total', boxX + boxPad, y3);
+    doc.text(formatPrice(total), boxX + boxW - boxPad, y3, { align: 'right' });
 
-    // Terms
+    // Reset text style
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+
+    // ── Terms & Conditions ──
+    const termsY = boxY + boxH + 14;
     if (terms) {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Terms & Conditions:', 14, finalY + 28);
+      doc.text('Terms & Conditions:', 14, termsY);
       doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize(terms, pageW - 28);
-      doc.text(lines, 14, finalY + 35);
+      const splitTerms = doc.splitTextToSize(terms, pageW - 28);
+      doc.text(splitTerms, 14, termsY + 7);
     }
 
-    // Footer
+    // ── Footer ──
     doc.setFontSize(10);
     doc.setFont('helvetica', 'italic');
-    doc.text('Thank you for your business!', pageW / 2, doc.internal.pageSize.getHeight() - 15, { align: 'center' });
+    doc.setTextColor(130, 130, 140);
+    doc.text('Thank you for your business!', pageW / 2, pageH - 15, { align: 'center' });
 
     doc.save(`${invoiceNo}.pdf`);
   };
@@ -236,8 +235,8 @@ function Dashboard() {
   return (
     <main className="admin-page">
       <div className="admin-header">
-        <h1>CEO Invoice Dashboard</h1>
-        <p>Create and manage invoices for BK Option Ventures</p>
+        <h1>Invoice Generator</h1>
+        <p>Create and export branded PDF invoices for BK Option Ventures</p>
       </div>
 
       <div className="admin-body container">
@@ -247,7 +246,7 @@ function Dashboard() {
           <div className="admin-form-grid">
             {['name', 'email', 'phone', 'address'].map(field => (
               <div className="form-group" key={field}>
-                <label>{field.charAt(0).toUpperCase() + field.slice(1)}{field !== 'email' && field !== 'address' ? ' *' : ''}</label>
+                <label>{field.charAt(0).toUpperCase() + field.slice(1)}{(field === 'name' || field === 'phone') ? ' *' : ''}</label>
                 <input
                   type={field === 'email' ? 'email' : 'text'}
                   placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
@@ -350,11 +349,4 @@ function Dashboard() {
       </div>
     </main>
   );
-}
-
-// ── Page entry point ──
-export default function AdminPage() {
-  const [authed, setAuthed] = useState(sessionStorage.getItem('adminAuth') === 'true');
-  if (!authed) return <LoginModal onSuccess={() => setAuthed(true)} />;
-  return <Dashboard />;
 }

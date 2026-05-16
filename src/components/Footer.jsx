@@ -26,8 +26,8 @@ export default function Footer() {
           <h5>Contact Us</h5>
           <ul className="contact-list">
             <li>📍 Lagos, Nigeria</li>
-            <li>📞 <a href="tel:+2348000000000">+234 800 000 0000</a></li>
-            <li>✉️ <a href="mailto:info@bkoption.com">info@bkoption.com</a></li>
+            <li>📞 <a href="tel:+2348023938469">+234 802 393 8469</a></li>
+            <li>✉️ <a href="mailto:bkventure07@yahoo.com">bkventure07@yahoo.com</a></li>
             <li>🕐 Mon–Fri: 8AM–6PM | Sat: 9AM–4PM</li>
           </ul>
           <div className="social-links">

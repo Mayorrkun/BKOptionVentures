@@ -29,7 +29,7 @@ export default function HomePage() {
       {/* Welcome */}
       <section className="section welcome-section">
         <div className="container text-center">
-          <h2 className="section-title">Welcome to BK Option Ventures</h2>
+          <h2 className="section-title">Welcome to BK Option Equipment Ventures</h2>
           <p className="welcome-text">
             We are Lagos's premier event equipment rental and sales company. Whether you're planning
             an intimate birthday party or a large corporate gala, we have everything you need —

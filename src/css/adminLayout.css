@@ -1,0 +1,79 @@
+.admin-subnav {
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  height: 50px;
+  position: sticky;
+  top: 64px;
+  z-index: 90;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-subnav-brand {
+  color: var(--color-secondary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.admin-subnav-links {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+}
+
+.admin-subnav-links a {
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background 180ms, color 180ms;
+}
+
+.admin-subnav-links a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-white);
+}
+
+.admin-subnav-links a.active {
+  background: rgba(249, 115, 22, 0.18);
+  color: var(--color-secondary);
+}
+
+.admin-subnav-back {
+  color: rgba(255, 255, 255, 0.45);
+  text-decoration: none;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 180ms;
+}
+
+.admin-subnav-back:hover {
+  color: var(--color-white);
+}
+
+@media (max-width: 767px) {
+  .admin-subnav {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 16px;
+    gap: 10px;
+    top: 60px;
+  }
+
+  .admin-subnav-links a {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+
+  .admin-subnav-back {
+    font-size: 0.75rem;
+  }
+}

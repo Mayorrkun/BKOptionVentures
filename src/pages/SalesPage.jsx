@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { salesProducts } from '../data/products.js';
+import { useProducts } from '../context/ProductsContext.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import CategorySidebar from '../components/CategorySidebar.jsx';
 import CartDrawer from '../components/CartDrawer.jsx';
@@ -18,6 +18,7 @@ function sortProducts(products, sort) {
 }
 
 export default function SalesPage() {
+  const { salesProducts } = useProducts();
   const [selected, setSelected] = useState([]);
   const [sort, setSort] = useState('popular');
   const [visible, setVisible] = useState(PAGE_SIZE);
@@ -28,7 +29,7 @@ export default function SalesPage() {
     let list = salesProducts;
     if (selected.length > 0) list = list.filter(p => selected.includes(p.category));
     return sortProducts(list, sort);
-  }, [selected, sort]);
+  }, [salesProducts, selected, sort]);
 
   return (
     <main className="list-page">

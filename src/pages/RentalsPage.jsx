@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { rentalProducts } from '../data/products.js';
+import { useProducts } from '../context/ProductsContext.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import CategorySidebar from '../components/CategorySidebar.jsx';
 import '../css/listpage.css';
@@ -17,6 +17,7 @@ function sortProducts(products, sort) {
 }
 
 export default function RentalsPage() {
+  const { rentalProducts } = useProducts();
   const [searchParams] = useSearchParams();
   const initCat = searchParams.get('category')?.replace('+', ' ') || null;
 
@@ -28,7 +29,7 @@ export default function RentalsPage() {
     let list = rentalProducts;
     if (selected.length > 0) list = list.filter(p => selected.includes(p.category));
     return sortProducts(list, sort);
-  }, [selected, sort]);
+  }, [rentalProducts, selected, sort]);
 
   return (
     <main className="list-page">

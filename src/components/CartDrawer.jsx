@@ -10,14 +10,15 @@ function buildWhatsAppMessage(cart, subtotal) {
   const lines = cart
     .map(({ product, qty }) => {
       const line = product.price * qty;
-      return `• ${product.name} × ${qty} = ${formatPrice(line)}`;
+      const unit = product.priceUnit === 'per day' ? '/day' : '';
+      return `• ${product.name} × ${qty} = ${formatPrice(line)}${unit}`;
     })
     .join('\n');
 
   return (
-    `Hello, I'd like to order the following items:\n\n${lines}\n\n` +
+    `Hello, I'd like to order/enquire about the following:\n\n${lines}\n\n` +
     `Total: ${formatPrice(subtotal)}\n\n` +
-    `Please reply with your name and delivery address to confirm.`
+    `Please reply with your name, delivery address, and (for rentals) your rental dates to confirm.`
   );
 }
 

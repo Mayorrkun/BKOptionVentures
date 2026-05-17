@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useProducts } from '../context/ProductsContext.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import CategorySidebar from '../components/CategorySidebar.jsx';
+import CartDrawer from '../components/CartDrawer.jsx';
+import { useCart } from '../context/CartContext.jsx';
 import '../css/listpage.css';
 
 const CATEGORIES = ['Canopies', 'Chairs', 'Tables', 'Fans', 'Air Conditioners'];
@@ -24,6 +26,8 @@ export default function RentalsPage() {
   const [selected, setSelected] = useState(initCat ? [initCat] : []);
   const [sort, setSort] = useState('popular');
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { totalItems } = useCart();
 
   const filtered = useMemo(() => {
     let list = rentalProducts;
@@ -48,7 +52,14 @@ export default function RentalsPage() {
         />
 
         <div className="list-main">
-          <p className="result-count">{filtered.length} item{filtered.length !== 1 ? 's' : ''} found</p>
+          <div className="list-main-header">
+            <p className="result-count">{filtered.length} item{filtered.length !== 1 ? 's' : ''} found</p>
+            {totalItems > 0 && (
+              <button className="btn btn-success btn-md" onClick={() => setDrawerOpen(true)}>
+                🛒 View Cart ({totalItems})
+              </button>
+            )}
+          </div>
           <div className="product-grid">
             {filtered.slice(0, visible).map(p => (
               <ProductCard key={p.id} product={p} variant="rental" />
@@ -66,6 +77,7 @@ export default function RentalsPage() {
           )}
         </div>
       </div>
+      <CartDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </main>
   );
 }

@@ -33,9 +33,12 @@ export default function ProductCard({ product, variant = 'rental' }) {
         </p>
 
         {variant === 'rental' ? (
-          <Link to={`${base}/${product.id}`} className="btn btn-primary btn-sm product-card-btn">
-            View Details →
-          </Link>
+          <button
+            className="btn btn-primary btn-sm product-card-btn"
+            onClick={() => addToCart(product)}
+          >
+            Add to Cart
+          </button>
         ) : (
           <button
             className="btn btn-primary btn-sm product-card-btn"

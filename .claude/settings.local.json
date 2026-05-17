@@ -4,7 +4,10 @@
       "Bash(powershell -Command ' *)",
       "Bash(dir \"C:\\\\Users\\\\MindsAuthor\\\\desktop\\\\bkoptionventures\\\\src\\\\Images\\\\ChairTableSets\" /b)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\MindsAuthor\\\\Desktop\\\\BKOptionVentures\" -Force)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\MindsAuthor\\\\Desktop\\\\BKOptionVentures\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)"
     ]
   }
 }

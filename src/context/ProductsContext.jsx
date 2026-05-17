@@ -1,58 +1,84 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import {
+  collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDocs
+} from 'firebase/firestore';
+import { db } from '../firebase';
 import { rentalProducts as initialRentals, salesProducts as initialSales } from '../data/products.js';
 
-const STORE_KEY = 'bk_products';
-const STORE_VERSION = 2; // bump whenever products.js seed data changes (e.g. image renames)
-
-function loadStore() {
-  try {
-    const saved = localStorage.getItem(STORE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.version === STORE_VERSION) {
-        const { version: _, ...data } = parsed;
-        return data;
-      }
-      // version mismatch — fall through and re-seed
-    }
-  } catch {}
-  const seed = { version: STORE_VERSION, rentals: initialRentals, sales: initialSales };
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(seed)); } catch {}
-  return { rentals: initialRentals, sales: initialSales };
-}
+const RENTALS_COL = 'rentalProducts';
+const SALES_COL = 'salesProducts';
 
 const ProductsContext = createContext(null);
 
+async function seedIfEmpty(colName, initialData) {
+  const colRef = collection(db, colName);
+  const snapshot = await getDocs(colRef);
+  if (snapshot.empty) {
+    for (const product of initialData) {
+      await setDoc(doc(colRef, product.id), product);
+    }
+  }
+}
+
 export function ProductsProvider({ children }) {
-  const [store, setStore] = useState(loadStore);
+  const [rentalProducts, setRentalProducts] = useState([]);
+  const [salesProducts, setSalesProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const loadedCount = useRef(0);
+  const seeded = useRef(false);
 
-  function commit(next) {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify({ version: STORE_VERSION, ...next })); } catch {}
-    setStore(next);
+  function markLoaded() {
+    loadedCount.current += 1;
+    if (loadedCount.current >= 2) setLoading(false);
   }
 
-  function addProduct(type, product) {
-    const key = type === 'rental' ? 'rentals' : 'sales';
-    commit({ ...store, [key]: [...store[key], product] });
+  useEffect(() => {
+    if (!seeded.current) {
+      seeded.current = true;
+      seedIfEmpty(RENTALS_COL, initialRentals);
+      seedIfEmpty(SALES_COL, initialSales);
+    }
+
+    const unsubRentals = onSnapshot(collection(db, RENTALS_COL), (snap) => {
+      setRentalProducts(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      markLoaded();
+    });
+
+    const unsubSales = onSnapshot(collection(db, SALES_COL), (snap) => {
+      setSalesProducts(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      markLoaded();
+    });
+
+    return () => {
+      unsubRentals();
+      unsubSales();
+    };
+  }, []);
+
+  async function addProduct(type, product) {
+    const colRef = collection(db, type === 'rental' ? RENTALS_COL : SALES_COL);
+    const id = product.id || `${type === 'rental' ? 'r' : 's'}${Date.now()}`;
+    await setDoc(doc(colRef, id), { ...product, id });
   }
 
-  function updateProduct(type, id, updates) {
-    const key = type === 'rental' ? 'rentals' : 'sales';
-    commit({ ...store, [key]: store[key].map(p => p.id === id ? { ...p, ...updates } : p) });
+  async function updateProduct(type, id, updates) {
+    const colRef = collection(db, type === 'rental' ? RENTALS_COL : SALES_COL);
+    await updateDoc(doc(colRef, id), updates);
   }
 
-  function deleteProduct(type, id) {
-    const key = type === 'rental' ? 'rentals' : 'sales';
-    commit({ ...store, [key]: store[key].filter(p => p.id !== id) });
+  async function deleteProduct(type, id) {
+    const colRef = collection(db, type === 'rental' ? RENTALS_COL : SALES_COL);
+    await deleteDoc(doc(colRef, id));
   }
 
   return (
     <ProductsContext.Provider value={{
-      rentalProducts: store.rentals,
-      salesProducts: store.sales,
+      rentalProducts,
+      salesProducts,
       addProduct,
       updateProduct,
       deleteProduct,
+      loading,
     }}>
       {children}
     </ProductsContext.Provider>

@@ -83,7 +83,7 @@ export default function ProductDetailPage({ type }) {
           <div className="detail-info">
             <p className="detail-category">{product.category}</p>
             <h1 className="detail-name">{product.name}</h1>
-            <div className="detail-rating">⭐⭐⭐⭐⭐ <span>(3 reviews)</span></div>
+            <div className="detail-rating">⭐⭐⭐⭐⭐ <span>(2 reviews)</span></div>
 
             <div className="detail-price">
               {formatPrice(product.price)}
@@ -113,12 +113,12 @@ export default function ProductDetailPage({ type }) {
                   >
                     Add to Cart
                   </button>
-                : <a
-                    href={`/contact`}
-                    className="btn btn-primary btn-lg"
+                : <button
+                      className="btn btn-primary btn-lg"
+                      onClick={() => addToCart(product)}
                   >
-                    Book Now
-                  </a>
+                      Add to Cart
+                  </button>
               }
               <a href="/contact" className="btn btn-secondary btn-lg">Contact for Quote</a>
             </div>

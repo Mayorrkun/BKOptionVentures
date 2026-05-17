@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(powershell -Command ' *)",
-      "Bash(dir \"C:\\\\Users\\\\MindsAuthor\\\\desktop\\\\bkoptionventures\\\\src\\\\Images\\\\ChairTableSets\" /b)"
+      "Bash(dir \"C:\\\\Users\\\\MindsAuthor\\\\desktop\\\\bkoptionventures\\\\src\\\\Images\\\\ChairTableSets\" /b)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\MindsAuthor\\\\Desktop\\\\BKOptionVentures\" -Force)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

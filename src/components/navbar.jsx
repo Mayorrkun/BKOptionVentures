@@ -14,7 +14,7 @@ const links = [
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { totalItems } = useCart();
+  const { totalItems, openCart } = useCart();
 
   return (
     <nav className="navbar">
@@ -38,10 +38,10 @@ export default function Nav() {
       </ul>
 
       <div className="nav-right">
-        <NavLink to="/sales" className="cart-icon" aria-label="Shopping cart">
+        <button className="cart-icon" onClick={openCart} aria-label="Shopping cart">
           🛒
           {totalItems > 0 && <span className="cart-badge">{totalItems}</span>}
-        </NavLink>
+        </button>
         <button
           className={`hamburger${menuOpen ? ' open' : ''}`}
           onClick={() => setMenuOpen(o => !o)}

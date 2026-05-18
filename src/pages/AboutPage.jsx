@@ -27,29 +27,29 @@ export default function AboutPage() {
       </div>
 
       {/* Our Story */}
-      <section className="section">
-        <div className="container about-story">
-          <h2 className="section-title">Our Story</h2>
-          <div className="story-body">
-            <p>
-              BK Option Ventures was founded in 2018 with a simple mission: to make high-quality
-              event equipment accessible and affordable for every Lagos family and business.
-              What started as a small operation with a handful of canopies and chairs has grown
-              into one of the most trusted event equipment suppliers in the state.
-            </p>
-            <p>
-              Today we serve hundreds of clients annually — from birthday parties and weddings
-              to corporate retreats and community events. Our fleet now includes premium canopies,
-              banquet chairs, round and rectangular tables, industrial fans, and air conditioner
-              units, all maintained to the highest standards.
-            </p>
-            <p>
-              Our team understands that every event is unique. That's why we offer personalised
-              consultations, same-day quotes, and flexible packages tailored to your exact needs.
-            </p>
-          </div>
-        </div>
-      </section>
+      {/*<section className="section">*/}
+      {/*  <div className="container about-story">*/}
+      {/*    <h2 className="section-title">Our Story</h2>*/}
+      {/*    <div className="story-body">*/}
+      {/*      <p>*/}
+      {/*        BK Option Ventures was founded in 2018 with a simple mission: to make high-quality*/}
+      {/*        event equipment accessible and affordable for every Lagos family and business.*/}
+      {/*        What started as a small operation with a handful of canopies and chairs has grown*/}
+      {/*        into one of the most trusted event equipment suppliers in the state.*/}
+      {/*      </p>*/}
+      {/*      <p>*/}
+      {/*        Today we serve hundreds of clients annually — from birthday parties and weddings*/}
+      {/*        to corporate retreats and community events. Our fleet now includes premium canopies,*/}
+      {/*        banquet chairs, round and rectangular tables, industrial fans, and air conditioner*/}
+      {/*        units, all maintained to the highest standards.*/}
+      {/*      </p>*/}
+      {/*      <p>*/}
+      {/*        Our team understands that every event is unique. That's why we offer personalised*/}
+      {/*        consultations, same-day quotes, and flexible packages tailored to your exact needs.*/}
+      {/*      </p>*/}
+      {/*    </div>*/}
+      {/*  </div>*/}
+      {/*</section>*/}
 
       {/* Mission & Vision */}
       <section className="section mv-section">

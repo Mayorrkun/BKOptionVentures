@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import Nav from './components/navbar.jsx';
 import Footer from './components/Footer.jsx';
+import CartDrawer from './components/CartDrawer.jsx';
+import { useCart } from './context/CartContext.jsx';
 import AdminLayout from './components/AdminLayout.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RentalsPage from './pages/RentalsPage.jsx';
@@ -13,9 +15,12 @@ import AdminProductsPage from './pages/Admin/AdminProductsPage.jsx';
 import AdminInvoicePage from './pages/Admin/AdminInvoicePage.jsx';
 
 function App() {
+  const { cartOpen, closeCart } = useCart();
+
   return (
     <>
       <Nav />
+      <CartDrawer open={cartOpen} onClose={closeCart} />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/rentals" element={<RentalsPage />} />

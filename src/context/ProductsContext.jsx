@@ -7,6 +7,7 @@ import { rentalProducts as initialRentals, salesProducts as initialSales } from 
 
 const RENTALS_COL = 'rentalProducts';
 const SALES_COL = 'salesProducts';
+const FORCE_RESEED = true; // set back to false after one app load
 
 const ProductsContext = createContext(null);
 
@@ -17,6 +18,15 @@ async function seedIfEmpty(colName, initialData) {
     for (const product of initialData) {
       await setDoc(doc(colRef, product.id), product);
     }
+  }
+}
+
+async function forceReseed(colName, initialData) {
+  const colRef = collection(db, colName);
+  const snapshot = await getDocs(colRef);
+  await Promise.all(snapshot.docs.map(d => deleteDoc(doc(colRef, d.id))));
+  for (const product of initialData) {
+    await setDoc(doc(colRef, product.id), product);
   }
 }
 
@@ -35,8 +45,13 @@ export function ProductsProvider({ children }) {
   useEffect(() => {
     if (!seeded.current) {
       seeded.current = true;
-      seedIfEmpty(RENTALS_COL, initialRentals);
-      seedIfEmpty(SALES_COL, initialSales);
+      if (FORCE_RESEED) {
+        forceReseed(RENTALS_COL, initialRentals);
+        forceReseed(SALES_COL, initialSales);
+      } else {
+        seedIfEmpty(RENTALS_COL, initialRentals);
+        seedIfEmpty(SALES_COL, initialSales);
+      }
     }
 
     const unsubRentals = onSnapshot(collection(db, RENTALS_COL), (snap) => {

@@ -28,10 +28,10 @@ function formatPrice(p) {
 
 function statusBadgeColor(status) {
   switch (status) {
-    case 'Paid':            return [16, 185, 129];
-    case 'Overdue':         return [239, 68, 68];
-    case 'Partially Paid':  return [20, 184, 166];
-    default:                return [249, 115, 22]; // Pending
+    case 'Paid':           return [16, 185, 129];
+    case 'Overdue':        return [239, 68, 68];
+    case 'Partially Paid': return [20, 184, 166];
+    default:               return [249, 115, 22];
   }
 }
 
@@ -73,41 +73,71 @@ function numberToWords(amount) {
   return words + ' Only';
 }
 
-// ── Line item row ──
-function LineItemRow({ item, onChange, onRemove }) {
+// ── Line item row (with optional day sub-rows) ──
+function LineItemRow({ item, onChange, onRemove, onAddDay, onUpdateDay, onRemoveDay }) {
+  const handleAddDay = () => {
+    const dayNumber = (item.days || []).length + 2;
+    const mirroredAmount = item.qty * item.unitPrice; // auto-mirror Day 1 total
+    onAddDay(item.id, { id: `d_${Date.now()}`, label: `Day ${dayNumber}`, amount: mirroredAmount });
+  };
+
   return (
-    <tr>
-      <td>
-        <input
-          type="text"
-          value={item.description}
-          onChange={e => onChange({ ...item, description: e.target.value })}
-          placeholder="Item description"
-        />
-      </td>
-      <td>
-        <input
-          type="number"
-          min={1}
-          value={item.qty}
-          onChange={e => onChange({ ...item, qty: Math.max(1, +e.target.value) })}
-          className="qty-input"
-        />
-      </td>
-      <td>
-        <input
-          type="number"
-          min={0}
-          value={item.unitPrice}
-          onChange={e => onChange({ ...item, unitPrice: +e.target.value })}
-          className="price-input"
-        />
-      </td>
-      <td className="line-total">{formatPrice(item.qty * item.unitPrice)}</td>
-      <td>
-        <button className="remove-row-btn" onClick={onRemove}>✕</button>
-      </td>
-    </tr>
+    <>
+      <tr>
+        <td>
+          <input
+            type="text"
+            value={item.description}
+            onChange={e => onChange({ ...item, description: e.target.value })}
+            placeholder="Item description"
+          />
+        </td>
+        <td>
+          <input
+            type="number"
+            min={0}
+            value={item.qty}
+            onChange={e => onChange({ ...item, qty: Math.max(0, +e.target.value) })}
+            className="qty-input"
+          />
+        </td>
+        <td>
+          <input
+            type="number"
+            min={0}
+            value={item.unitPrice}
+            onChange={e => onChange({ ...item, unitPrice: +e.target.value })}
+            className="price-input"
+          />
+        </td>
+        <td className="line-total">{formatPrice(item.qty * item.unitPrice)}</td>
+        <td>
+          <div className="row-actions">
+            <button className="add-day-btn" onClick={handleAddDay} title="Add day cost" type="button">+Day</button>
+            <button className="remove-row-btn" onClick={onRemove} type="button">✕</button>
+          </div>
+        </td>
+      </tr>
+      {(item.days || []).map(day => (
+        <tr key={day.id} className="day-sub-row">
+          <td className="day-label-cell">└ {day.label}</td>
+          <td colSpan={2}></td>
+          <td>
+            <input
+              type="number"
+              min={0}
+              value={day.amount}
+              onChange={e => onUpdateDay(item.id, day.id, { ...day, amount: +e.target.value })}
+              className="price-input"
+              placeholder="Amount"
+            />
+          </td>
+          <td>
+            <button className="remove-row-btn" onClick={() => onRemoveDay(item.id, day.id)} type="button">✕</button>
+          </td>
+        </tr>
+      ))}
+    </>
   );
 }
 
@@ -115,25 +145,41 @@ function LineItemRow({ item, onChange, onRemove }) {
 export default function AdminInvoicePage() {
   const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '' });
   const [invoiceNo] = useState(generateInvoiceNumber);
-  const [invoiceDate] = useState(todayStr);
-  const [dueDate] = useState(dueDateStr);
-  const [lineItems, setLineItems] = useState([{ id: 1, description: '', qty: 1, unitPrice: 0 }]);
+  const [invoiceDate, setInvoiceDate] = useState(todayStr);
+  const [dueDate, setDueDate] = useState(dueDateStr);
+  const [lineItems, setLineItems] = useState([{ id: 1, description: '', qty: 0, unitPrice: 0, days: [] }]);
   const [status, setStatus] = useState('Pending');
   const [notes, setNotes] = useState('');
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [nextId, setNextId] = useState(2);
+  const [serviceCharge, setServiceCharge] = useState(''); // percentage, e.g. 10 = 10%
+  const [transportation, setTransportation] = useState('');
   const [pdfLoading, setPdfLoading] = useState(false);
 
-  const subtotal = useMemo(() => lineItems.reduce((s, i) => s + i.qty * i.unitPrice, 0), [lineItems]);
+  const subtotal = useMemo(() =>
+    lineItems.reduce((s, i) => {
+      const itemTotal = i.qty * i.unitPrice;
+      const dayTotal = (i.days || []).reduce((d, day) => d + (+day.amount || 0), 0);
+      return s + itemTotal + dayTotal;
+    }, 0),
+  [lineItems]);
   const tax = subtotal * 0.075;
-  const total = subtotal + tax;
+  const serviceChargeAmount = subtotal * (+serviceCharge || 0) / 100;
+  const total = subtotal + tax + serviceChargeAmount + (+transportation || 0);
 
   const addLine = () => {
-    setLineItems(prev => [...prev, { id: nextId, description: '', qty: 1, unitPrice: 0 }]);
+    setLineItems(prev => [...prev, { id: nextId, description: '', qty: 0, unitPrice: 0, days: [] }]);
     setNextId(n => n + 1);
   };
   const updateLine = (id, data) => setLineItems(prev => prev.map(i => i.id === id ? data : i));
   const removeLine = id => setLineItems(prev => prev.filter(i => i.id !== id));
+
+  const addDay = (itemId, day) =>
+    setLineItems(prev => prev.map(i => i.id === itemId ? { ...i, days: [...(i.days || []), day] } : i));
+  const updateDay = (itemId, dayId, data) =>
+    setLineItems(prev => prev.map(i => i.id === itemId ? { ...i, days: i.days.map(d => d.id === dayId ? data : d) } : i));
+  const removeDay = (itemId, dayId) =>
+    setLineItems(prev => prev.map(i => i.id === itemId ? { ...i, days: i.days.filter(d => d.id !== dayId) } : i));
 
   const generatePDF = async () => {
     setPdfLoading(true);
@@ -143,11 +189,11 @@ export default function AdminInvoicePage() {
       const pageW = 210;
       const pageH = 297;
 
-      // ── Corner decorations (drawn first, behind content) ──
+      // ── Corner decorations ──
       doc.setFillColor(249, 115, 22);
-      doc.circle(pageW + 12, -12, 38, 'F');   // orange top-right arc
+      doc.circle(pageW + 12, -12, 38, 'F');
       doc.setFillColor(30, 58, 138);
-      doc.circle(-12, pageH + 12, 38, 'F');   // navy bottom-left arc
+      doc.circle(-12, pageH + 12, 38, 'F');
 
       // ── Logo + Company name ──
       if (logoBase64) {
@@ -206,18 +252,45 @@ export default function AdminInvoicePage() {
       doc.setTextColor(25, 25, 35);
       doc.text(dueDate, 44, 79);
 
+      // ── Issued To block (labeled format) ──
       const midX = pageW / 2 + 10;
+      const labelOff = 20; // mm from label start to value start
+      const valW = pageW - 12 - midX - labelOff - 2; // ~56mm available for values
+
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8.5);
       doc.setTextColor(30, 58, 138);
       doc.text('Issued To:', midX, 68);
+
+      let itY = 75;
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(90, 95, 110);
+      doc.text('Name:', midX, itY);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
       doc.setTextColor(25, 25, 35);
-      doc.text(customer.name || '—', midX, 75);
+      doc.text(doc.splitTextToSize(customer.name || '—', valW)[0], midX + labelOff, itY);
+      itY += 6;
+
       if (customer.phone) {
-        doc.setFontSize(8.5);
-        doc.text(customer.phone, midX, 81);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(90, 95, 110);
+        doc.text('Phone:', midX, itY);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(25, 25, 35);
+        doc.text(customer.phone, midX + labelOff, itY);
+        itY += 6;
+      }
+
+      if (customer.address) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(90, 95, 110);
+        doc.text('Address:', midX, itY);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(25, 25, 35);
+        const splitAddr = doc.splitTextToSize(customer.address, valW);
+        doc.text(splitAddr, midX + labelOff, itY);
       }
 
       // ── Payment status badge ──
@@ -232,28 +305,43 @@ export default function AdminInvoicePage() {
       // ── Line items table ──
       autoTable(doc, {
         startY: 90,
-        head: [['S/N', 'DESCRIPTION OF GOODS', 'QTY', 'RATE', 'SUBTOTAL']],
-        body: lineItems.map((item, idx) => [
-          idx + 1,
-          item.description || '—',
-          item.qty,
-          item.unitPrice.toLocaleString('en-NG'),
-          (item.qty * item.unitPrice).toLocaleString('en-NG'),
+        head: [['S/N', 'DESCRIPTION', 'QTY', 'RATE', 'TOTAL']],
+        body: lineItems.flatMap((item, idx) => [
+          [
+            idx + 1,
+            item.description || '—',
+            item.qty,
+            item.unitPrice.toLocaleString('en-NG'),
+            (item.qty * item.unitPrice).toLocaleString('en-NG'),
+          ],
+          // Day sub-rows: styled with gray italic to distinguish from parent rows
+          ...(item.days || []).map(day => [
+            { content: '', styles: { fillColor: [245, 246, 248] } },
+            { content: `  └ ${day.label}`, styles: { fontStyle: 'italic', textColor: [110, 115, 130], fillColor: [245, 246, 248] } },
+            { content: '', styles: { fillColor: [245, 246, 248] } },
+            { content: '', styles: { fillColor: [245, 246, 248] } },
+            { content: (+day.amount || 0).toLocaleString('en-NG'), styles: { halign: 'right', textColor: [110, 115, 130], fillColor: [245, 246, 248], fontStyle: 'italic' } },
+          ]),
         ]),
         foot: [
           [
             { content: '', colSpan: 3 },
-            { content: 'Subtotal', styles: { halign: 'right', fontStyle: 'normal', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
-            { content: formatPrice(subtotal), styles: { halign: 'right', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
-          ],
-          [
-            { content: '', colSpan: 3 },
             { content: 'Tax (7.5%)', styles: { halign: 'right', fontStyle: 'normal', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
-            { content: formatPrice(tax), styles: { halign: 'right', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
+            { content: formatPrice(tax), styles: { halign: 'left', fillColor: [243, 244, 246], textColor: [50, 50, 60], fontSize: 8 } },
           ],
+          ...(+serviceCharge > 0 ? [[
+            { content: '', colSpan: 3 },
+            { content: `Service Charge (${serviceCharge}%)`, styles: { halign: 'right', fontStyle: 'normal', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
+            { content: formatPrice(serviceChargeAmount), styles: { halign: 'left', fillColor: [243, 244, 246], textColor: [50, 50, 60], fontSize: 8 } },
+          ]] : []),
+          ...(+transportation > 0 ? [[
+            { content: '', colSpan: 3 },
+            { content: 'Transportation', styles: { halign: 'right', fontStyle: 'normal', fillColor: [243, 244, 246], textColor: [50, 50, 60] } },
+            { content: formatPrice(+transportation), styles: { halign: 'left', fillColor: [243, 244, 246], textColor: [50, 50, 60], fontSize: 8 } },
+          ]] : []),
           [
             { content: 'GRAND TOTAL', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255], fontSize: 10 } },
-            { content: formatPrice(total), styles: { halign: 'right', fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255], fontSize: 10 } },
+            { content: formatPrice(total), styles: { halign: 'left', fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255], fontSize: 10 } },
           ],
         ],
         styles: { fontSize: 9, cellPadding: 5, textColor: [25, 25, 35] },
@@ -261,11 +349,11 @@ export default function AdminInvoicePage() {
         footStyles: { fontSize: 9 },
         alternateRowStyles: { fillColor: [248, 249, 252] },
         columnStyles: {
-          0: { cellWidth: 14, halign: 'center' },
-          1: { cellWidth: 80 },
-          2: { cellWidth: 16, halign: 'center' },
-          3: { cellWidth: 38, halign: 'right' },
-          4: { cellWidth: 38, halign: 'right' },
+          0: { cellWidth: 20, halign: 'center' },
+          1: { cellWidth: 52 },
+          2: { cellWidth: 20, halign: 'center' },
+          3: { cellWidth: 45, halign: 'left' },
+          4: { cellWidth: 60, halign: 'left' },
         },
         margin: { left: 12, right: 12 },
       });
@@ -339,7 +427,7 @@ export default function AdminInvoicePage() {
   };
 
   const saveDraft = () => {
-    const draft = { customer, invoiceNo, invoiceDate, dueDate, lineItems, status, notes, terms };
+    const draft = { customer, invoiceNo, invoiceDate, dueDate, lineItems, status, notes, terms, serviceCharge, transportation };
     localStorage.setItem('invoiceDraft', JSON.stringify(draft));
     alert('Draft saved!');
   };
@@ -380,11 +468,11 @@ export default function AdminInvoicePage() {
             </div>
             <div className="form-group">
               <label>Invoice Date</label>
-              <input value={invoiceDate} readOnly />
+              <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
             </div>
             <div className="form-group">
               <label>Due Date</label>
-              <input value={dueDate} readOnly />
+              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
             </div>
           </div>
         </section>
@@ -410,6 +498,9 @@ export default function AdminInvoicePage() {
                     item={item}
                     onChange={data => updateLine(item.id, data)}
                     onRemove={() => removeLine(item.id)}
+                    onAddDay={addDay}
+                    onUpdateDay={updateDay}
+                    onRemoveDay={removeDay}
                   />
                 ))}
               </tbody>
@@ -422,9 +513,42 @@ export default function AdminInvoicePage() {
         <section className="admin-section pricing-summary">
           <h3>Pricing Summary</h3>
           <div className="summary-rows">
-            <div className="summary-row"><span>Subtotal</span><strong>{formatPrice(subtotal)}</strong></div>
-            <div className="summary-row"><span>Tax (7.5%)</span><strong>{formatPrice(tax)}</strong></div>
-            <div className="summary-row total-row"><span>Total</span><strong>{formatPrice(total)}</strong></div>
+            <div className="summary-row">
+              <span>Tax (7.5%)</span>
+              <strong>{formatPrice(tax)}</strong>
+            </div>
+            <div className="summary-row summary-input-row">
+              <span>Service Charge (%)</span>
+              <div className="summary-pct-group">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={serviceCharge}
+                  onChange={e => setServiceCharge(e.target.value)}
+                  className="summary-charge-input"
+                  placeholder="0"
+                />
+                {+serviceCharge > 0 && (
+                  <span className="summary-pct-computed">= {formatPrice(serviceChargeAmount)}</span>
+                )}
+              </div>
+            </div>
+            <div className="summary-row summary-input-row">
+              <span>Transportation (₦)</span>
+              <input
+                type="number"
+                min={0}
+                value={transportation}
+                onChange={e => setTransportation(e.target.value)}
+                className="summary-charge-input"
+                placeholder="0"
+              />
+            </div>
+            <div className="summary-row total-row">
+              <span>Total</span>
+              <strong>{formatPrice(total)}</strong>
+            </div>
           </div>
         </section>
 

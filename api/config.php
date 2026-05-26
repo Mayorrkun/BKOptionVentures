@@ -4,9 +4,12 @@
 // Fill these in AFTER you create the database on Hostinger cPanel.
 // ─────────────────────────────────────────────────────────────────────────────
 define('DB_HOST', 'localhost');       // Usually 'localhost' on Hostinger shared
-define('DB_NAME', '');    // e.g.  u355801186_bkventure
-define('DB_USER', '');    // e.g.  u355801186_bkventure
-define('DB_PASS', 'Bkventure1');
+define('DB_NAME', 'bkoptionventure');    // e.g.  u355801186_bkventure
+define('DB_USER', 'root'); // XAMPP default — change for production
+define('DB_PASS', '');    // XAMPP default has no password — change for production
+
+//-define('DB_USER', '');    // e.g.  u355801186_bkventure
+//define('DB_PASS', 'Bkventure1');
 
 // API key used to protect admin (write) operations.
 // Must match ADMIN_PASSWORD in src/config.js

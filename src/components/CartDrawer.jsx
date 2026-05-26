@@ -2,31 +2,22 @@ import { useCart } from '../context/CartContext.jsx';
 import { CEO_WHATSAPP } from '../config.js';
 import '../css/cartdrawer.css';
 
-function formatPrice(p) {
-  return '₦' + p.toLocaleString('en-NG');
-}
-
-function buildWhatsAppMessage(cart, subtotal) {
+function buildWhatsAppMessage(cart) {
   const lines = cart
-    .map(({ product, qty }) => {
-      const line = product.price * qty;
-      const unit = product.priceUnit === 'per day' ? '/day' : '';
-      return `• ${product.name} × ${qty} = ${formatPrice(line)}${unit}`;
-    })
+    .map(({ product, qty }) => `• ${product.name} × ${qty}`)
     .join('\n');
 
   return (
-    `Hello, I'd like to order/enquire about the following:\n\n${lines}\n\n` +
-    `Total: ${formatPrice(subtotal)}\n\n` +
-    `Please reply with your name, delivery address, and (for rentals) your rental dates to confirm.`
+    `Hello, I'd like to enquire about the following items:\n\n${lines}\n\n` +
+    `Please reply with your name, delivery address, and (for rentals) your preferred dates so we can confirm availability and provide a quote.`
   );
 }
 
 export default function CartDrawer({ open, onClose }) {
-  const { cart, removeFromCart, updateQty, subtotal, clearCart } = useCart();
+  const { cart, removeFromCart, updateQty, clearCart } = useCart();
 
   const handleCheckout = () => {
-    const msg = buildWhatsAppMessage(cart, subtotal);
+    const msg = buildWhatsAppMessage(cart);
     window.open(`https://wa.me/${CEO_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
@@ -48,7 +39,6 @@ export default function CartDrawer({ open, onClose }) {
                 <li key={product.id} className="drawer-item">
                   <div className="drawer-item-info">
                     <span className="drawer-item-name">{product.name}</span>
-                    <span className="drawer-item-price">{formatPrice(product.price)}</span>
                   </div>
                   <div className="drawer-item-controls">
                     <button onClick={() => updateQty(product.id, Math.max(1, qty - 1))}>−</button>
@@ -56,18 +46,11 @@ export default function CartDrawer({ open, onClose }) {
                     <button onClick={() => updateQty(product.id, qty + 1)}>+</button>
                     <button className="remove-btn" onClick={() => removeFromCart(product.id)}>🗑</button>
                   </div>
-                  <div className="drawer-item-line">
-                    Line total: <strong>{formatPrice(product.price * qty)}</strong>
-                  </div>
                 </li>
               ))}
             </ul>
 
             <div className="drawer-footer">
-              <div className="drawer-subtotal">
-                <span>Subtotal</span>
-                <strong>{formatPrice(subtotal)}</strong>
-              </div>
               <button className="btn btn-success btn-lg checkout-btn" onClick={handleCheckout}>
                 💬 Checkout via WhatsApp
               </button>

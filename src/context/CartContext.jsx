@@ -40,10 +40,9 @@ export function CartProvider({ children }) {
   const closeCart = () => setCartOpen(false);
 
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.qty, 0);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQty, clearCart, totalItems, subtotal, cartOpen, openCart, closeCart }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQty, clearCart, totalItems, cartOpen, openCart, closeCart }}>
       {children}
     </CartContext.Provider>
   );

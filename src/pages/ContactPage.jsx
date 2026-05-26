@@ -6,10 +6,21 @@ export default function ContactPage() {
   const { register, handleSubmit, formState: { errors }, reset } = useForm();
   const [submitted, setSubmitted] = useState(false);
 
-  const onSubmit = data => {
-    console.log('Contact form submission:', data);
-    setSubmitted(true);
-    reset();
+  const onSubmit = async data => {
+    try {
+      const res = await fetch('/api/contact.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Submission failed');
+      setSubmitted(true);
+      reset();
+    } catch (err) {
+      alert('Could not send your message. Please try again or contact us directly.');
+      console.error(err);
+    }
   };
 
   return (

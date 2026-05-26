@@ -1,0 +1,24 @@
+# BK Option Ventures — Apache SPA Routing
+# Redirects all non-file, non-directory requests to index.html
+# so React Router handles /rentals, /sales, /admin, etc. without 404s.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Let the API folder through — never rewrite /api/* requests
+  RewriteRule ^api/ - [L]
+
+  # Let the uploads folder through
+  RewriteRule ^uploads/ - [L]
+
+  # Let the images folder through
+  RewriteRule ^images/ - [L]
+
+  # Don't rewrite existing files or directories
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+
+  # Everything else → React entry point
+  RewriteRule . /index.html [L]
+</IfModule>

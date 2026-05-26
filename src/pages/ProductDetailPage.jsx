@@ -6,10 +6,6 @@ import Breadcrumb from '../components/Breadcrumb.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import '../css/productdetail.css';
 
-function formatPrice(p) {
-  return '₦' + p.toLocaleString('en-NG');
-}
-
 const TABS = ['Description', 'Specifications', 'Reviews'];
 
 const placeholderReviews = [
@@ -84,11 +80,6 @@ export default function ProductDetailPage({ type }) {
             <p className="detail-category">{product.category}</p>
             <h1 className="detail-name">{product.name}</h1>
             <div className="detail-rating">⭐⭐⭐⭐⭐ <span>(2 reviews)</span></div>
-
-            <div className="detail-price">
-              {formatPrice(product.price)}
-              {type === 'rental' && <span className="price-unit"> / day</span>}
-            </div>
 
             {type === 'sale' && product.stock !== undefined && (
               <p className={`detail-stock ${product.stock > 0 ? 'in' : 'out'}`}>

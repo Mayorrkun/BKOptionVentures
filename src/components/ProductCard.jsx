@@ -2,10 +2,6 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import '../css/productcard.css';
 
-function formatPrice(p) {
-  return '₦' + p.toLocaleString('en-NG');
-}
-
 export default function ProductCard({ product, variant = 'rental' }) {
   const { addToCart } = useCart();
   const img = product.images?.[0];
@@ -20,17 +16,13 @@ export default function ProductCard({ product, variant = 'rental' }) {
         }
         {variant === 'sale' && (
           <span className={`stock-badge ${product.stock > 0 ? 'in-stock' : 'out-stock'}`}>
-            {product.stock > 0 ? `In Stock: ${product.stock}` : 'Out of Stock'}
+            {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
           </span>
         )}
       </Link>
 
       <div className="product-card-body">
         <h4 className="product-card-name">{product.name}</h4>
-        <p className="product-card-price">
-          {formatPrice(product.price)}
-          {variant === 'rental' && <span className="price-unit"> / day</span>}
-        </p>
 
         {variant === 'rental' ? (
           <button

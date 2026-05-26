@@ -1,89 +1,75 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
-import {
-  collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDocs
-} from 'firebase/firestore';
-import { db } from '../firebase';
-import { rentalProducts as initialRentals, salesProducts as initialSales } from '../data/products.js';
+import { ADMIN_PASSWORD } from '../config.js';
 
-const RENTALS_COL = 'rentalProducts';
-const SALES_COL = 'salesProducts';
-const FORCE_RESEED = true; // set back to false after one app load
+const API_BASE = '/api';
 
 const ProductsContext = createContext(null);
 
-async function seedIfEmpty(colName, initialData) {
-  const colRef = collection(db, colName);
-  const snapshot = await getDocs(colRef);
-  if (snapshot.empty) {
-    for (const product of initialData) {
-      await setDoc(doc(colRef, product.id), product);
-    }
-  }
-}
-
-async function forceReseed(colName, initialData) {
-  const colRef = collection(db, colName);
-  const snapshot = await getDocs(colRef);
-  await Promise.all(snapshot.docs.map(d => deleteDoc(doc(colRef, d.id))));
-  for (const product of initialData) {
-    await setDoc(doc(colRef, product.id), product);
-  }
+async function apiFetch(path, options = {}) {
+  const res = await fetch(API_BASE + path, options);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'API error');
+  return json;
 }
 
 export function ProductsProvider({ children }) {
   const [rentalProducts, setRentalProducts] = useState([]);
   const [salesProducts, setSalesProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const loadedCount = useRef(0);
-  const seeded = useRef(false);
+  const intervalRef = useRef(null);
 
-  function markLoaded() {
-    loadedCount.current += 1;
-    if (loadedCount.current >= 2) setLoading(false);
+  async function fetchProducts() {
+    try {
+      const [rentals, sales] = await Promise.all([
+        apiFetch('/products.php?type=rental'),
+        apiFetch('/products.php?type=sale'),
+      ]);
+      setRentalProducts(rentals.data);
+      setSalesProducts(sales.data);
+    } catch (err) {
+      console.error('Failed to fetch products:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    if (!seeded.current) {
-      seeded.current = true;
-      if (FORCE_RESEED) {
-        forceReseed(RENTALS_COL, initialRentals);
-        forceReseed(SALES_COL, initialSales);
-      } else {
-        seedIfEmpty(RENTALS_COL, initialRentals);
-        seedIfEmpty(SALES_COL, initialSales);
-      }
-    }
-
-    const unsubRentals = onSnapshot(collection(db, RENTALS_COL), (snap) => {
-      setRentalProducts(snap.docs.map(d => ({ ...d.data(), id: d.id })));
-      markLoaded();
-    });
-
-    const unsubSales = onSnapshot(collection(db, SALES_COL), (snap) => {
-      setSalesProducts(snap.docs.map(d => ({ ...d.data(), id: d.id })));
-      markLoaded();
-    });
-
-    return () => {
-      unsubRentals();
-      unsubSales();
-    };
+    fetchProducts();
+    // Poll every 30 seconds so storefront reflects admin changes
+    intervalRef.current = setInterval(fetchProducts, 30000);
+    return () => clearInterval(intervalRef.current);
   }, []);
 
   async function addProduct(type, product) {
-    const colRef = collection(db, type === 'rental' ? RENTALS_COL : SALES_COL);
-    const id = product.id || `${type === 'rental' ? 'r' : 's'}${Date.now()}`;
-    await setDoc(doc(colRef, id), { ...product, id });
+    await apiFetch('/products.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': ADMIN_PASSWORD,
+      },
+      body: JSON.stringify({ ...product, type }),
+    });
+    await fetchProducts();
   }
 
   async function updateProduct(type, id, updates) {
-    const colRef = collection(db, type === 'rental' ? RENTALS_COL : SALES_COL);
-    await updateDoc(doc(colRef, id), updates);
+    await apiFetch('/products.php', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': ADMIN_PASSWORD,
+      },
+      body: JSON.stringify({ ...updates, id, type }),
+    });
+    await fetchProducts();
   }
 
   async function deleteProduct(type, id) {
-    const colRef = collection(db, type === 'rental' ? RENTALS_COL : SALES_COL);
-    await deleteDoc(doc(colRef, id));
+    await apiFetch(`/products.php?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { 'X-Api-Key': ADMIN_PASSWORD },
+    });
+    await fetchProducts();
   }
 
   return (

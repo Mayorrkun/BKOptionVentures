@@ -10,7 +10,8 @@
       "Bash(Sort-Object)",
       "Bash(Get-ChildItem -Path src -File -Recurse)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\MindsAuthor\\\\Desktop\\\\BKOptionVentures\" -Recurse -Force)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(git add *)"
     ]
   }
 }

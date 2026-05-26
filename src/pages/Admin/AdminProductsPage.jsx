@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProducts } from '../../context/ProductsContext.jsx';
-import { compressImage } from '../../utils/imageUtils.js';
+import { ADMIN_PASSWORD } from '../../config.js';
 import '../../css/admin.css';
 import '../../css/adminProducts.css';
 
@@ -49,10 +49,18 @@ function ProductForm({ type, initial, onSave, onCancel }) {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const compressed = await compressImage(file);
-      set('imagePreview', compressed);
-    } catch {
-      alert('Could not process image. Please try a different file.');
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch('/api/upload.php', {
+        method: 'POST',
+        headers: { 'X-Api-Key': ADMIN_PASSWORD },
+        body: formData,
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Upload failed');
+      set('imagePreview', json.url);
+    } catch (err) {
+      alert('Could not upload image: ' + err.message);
     }
   }
 
@@ -163,7 +171,7 @@ function ProductForm({ type, initial, onSave, onCancel }) {
                 onChange={handleFileChange}
               />
             </label>
-            <span className="form-hint">JPG, PNG, or WebP — auto-compressed to ≤ 800px</span>
+            <span className="form-hint">JPG, PNG, or WebP — max 5 MB</span>
           </div>
         </div>
       </div>

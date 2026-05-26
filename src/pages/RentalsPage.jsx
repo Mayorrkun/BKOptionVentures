@@ -11,9 +11,7 @@ const PAGE_SIZE = 9;
 
 function sortProducts(products, sort) {
   const arr = [...products];
-  if (sort === 'price-asc')  return arr.sort((a, b) => a.price - b.price);
-  if (sort === 'price-desc') return arr.sort((a, b) => b.price - a.price);
-  if (sort === 'name-asc')   return arr.sort((a, b) => a.name.localeCompare(b.name));
+  if (sort === 'name-asc') return arr.sort((a, b) => a.name.localeCompare(b.name));
   return arr;
 }
 

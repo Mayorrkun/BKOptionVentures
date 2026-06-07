@@ -7,9 +7,6 @@ import '../../css/adminProducts.css';
 const RENTAL_CATEGORIES = ['Canopies', 'Chairs', 'Tables', 'Fans', 'Air Conditioners'];
 const SALES_CATEGORIES = ['Chairs', 'Tables', 'Fans'];
 
-function formatPrice(p) {
-  return '₦' + (p || 0).toLocaleString('en-NG');
-}
 
 function emptyForm(type) {
   return {
@@ -66,13 +63,12 @@ function ProductForm({ type, initial, onSave, onCancel }) {
 
   const handleSave = () => {
     if (!form.name.trim()) { alert('Product name is required.'); return; }
-    if (!form.price || isNaN(+form.price) || +form.price < 0) { alert('A valid price is required.'); return; }
 
     const product = {
       id: isEdit ? initial.id : `${type === 'rental' ? 'r' : 's'}_${Date.now()}`,
       name: form.name.trim(),
       category: form.category,
-      price: +form.price,
+      price: 0,
       priceUnit: type === 'rental' ? 'per day' : 'each',
       description: form.description.trim(),
       specs: form.specs.split('\n').map(s => s.trim()).filter(Boolean),
@@ -101,16 +97,6 @@ function ProductForm({ type, initial, onSave, onCancel }) {
           <select value={form.category} onChange={e => set('category', e.target.value)}>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-        </div>
-        <div className="form-group">
-          <label>Price (₦) *</label>
-          <input
-            type="number"
-            min={0}
-            value={form.price}
-            onChange={e => set('price', e.target.value)}
-            placeholder="15000"
-          />
         </div>
         {type === 'sale' && (
           <div className="form-group">
@@ -204,7 +190,6 @@ function ProductTable({ products, type, onEdit, onDelete }) {
             <th>Image</th>
             <th>Name</th>
             <th>Category</th>
-            <th>Price</th>
             {type === 'sale' && <th>Stock</th>}
             <th>Actions</th>
           </tr>
@@ -220,10 +205,6 @@ function ProductTable({ products, type, onEdit, onDelete }) {
               </td>
               <td className="pt-name">{p.name}</td>
               <td><span className="cat-badge">{p.category}</span></td>
-              <td className="pt-price">
-                {formatPrice(p.price)}
-                <span className="pt-unit"> /{type === 'rental' ? 'day' : 'each'}</span>
-              </td>
               {type === 'sale' && <td>{p.stock ?? '—'}</td>}
               <td>
                 <div className="pt-actions">

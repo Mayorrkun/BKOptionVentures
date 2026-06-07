@@ -320,7 +320,7 @@ export default function AdminInvoicePage() {
             { content: `  └ ${day.label}`, styles: { fontStyle: 'italic', textColor: [110, 115, 130], fillColor: [245, 246, 248] } },
             { content: '', styles: { fillColor: [245, 246, 248] } },
             { content: '', styles: { fillColor: [245, 246, 248] } },
-            { content: (+day.amount || 0).toLocaleString('en-NG'), styles: { halign: 'right', textColor: [110, 115, 130], fillColor: [245, 246, 248], fontStyle: 'italic' } },
+            { content: (+day.amount || 0).toLocaleString('en-NG'), styles: { halign: 'left', textColor: [110, 115, 130], fillColor: [245, 246, 248], fontStyle: 'italic' } },
           ]),
         ]),
         foot: [

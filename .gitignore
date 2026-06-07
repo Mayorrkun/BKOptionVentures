@@ -1,4 +1,5 @@
 src/firebaseConfig.js
+/.claude
 # Logs
 logs
 *.log

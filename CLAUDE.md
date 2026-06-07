@@ -5,321 +5,122 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev       # Start Vite dev server with HMR
-npm run build     # Production build (outputs to dist/)
-npm run preview   # Preview the production build locally
-npm run lint      # Run ESLint
+npm run dev       # Vite dev server (frontend only — needs PHP API on /api)
+npm run build     # Production build → dist/
+npm run preview   # Preview the production build
+npm run lint      # ESLint (flat config)
 ```
 
----
+There is no test runner configured.
+
+The frontend expects the PHP API at `/api/*.php`. In dev, run PHP separately (XAMPP/MAMP/`php -S`) and either point Vite at it via a proxy or serve `dist/` from the same docroot. In production, both ship to the same domain (typical LAMP host).
+
+## Stack
+
+- **Frontend:** React 19 + Vite 8, JavaScript (no TypeScript), React Router 7, plain CSS per component
+- **Backend:** PHP + MySQL (mysqli), no framework — see `api/*.php`
+- **PDF:** jsPDF + jspdf-autotable (invoice generation, client-side)
+- **Forms:** react-hook-form is installed but not yet used everywhere
+- **No payment gateway:** checkout builds a `wa.me/...` deep link with the cart pre-filled
+
+`src/firebaseConfig.js` is committed but Firebase is not wired in anywhere — treat it as inert.
 
 ## Architecture
 
-**React + Vite** single-page app (JavaScript, no TypeScript). No routing library — the app is a single static layout.
-
-**Current render tree:**
-```
-main.jsx → App.jsx → <Nav /> + <Carousel />
-```
-
-- `src/components/navbar.jsx` — static navigation bar; menu items (Home, Rentals, Sales, Contacts) are hardcoded with no click handlers yet
-- `src/components/carousel.jsx` — auto-advances every 5 seconds using `useState`/`useEffect`; slide images live in `src/Images/Carousel/`
-- `src/css/` — plain CSS files, one per component
-- `src/Images/` — organized by category (Carousel, ChairTableSets, EventSets, Tents, Logo, Videos)
-
-ESLint uses the flat config format (`eslint.config.js`) with the React Hooks and React Refresh plugins.
-
----
-
-## Target Architecture
-
-The app needs to grow into a multi-page experience. Introduce **React Router** for client-side routing. The planned component/page tree is:
+### Render tree
 
 ```
 main.jsx
-└── App.jsx
-    ├── <Navbar />            ← upgrade existing component
-    ├── <Routes>
-    │   ├── / → <HomePage />
-    │   ├── /rentals → <RentalsPage />
-    │   ├── /rentals/:id → <ProductDetailPage />
-    │   ├── /sales → <SalesPage />
-    │   ├── /sales/:id → <ProductDetailPage />
-    │   ├── /about → <AboutPage />
-    │   ├── /contact → <ContactPage />
-    │   └── /admin → <CEODashboard />  ← password-protected
-    └── <Footer />
+└── BrowserRouter
+    └── ProductsProvider
+        └── CartProvider
+            └── App.jsx
+                ├── <Nav />
+                ├── <CartDrawer />        (controlled by CartContext)
+                ├── <Routes>
+                │   ├── /              → HomePage
+                │   ├── /rentals       → RentalsPage
+                │   ├── /rentals/:id   → ProductDetailPage type="rental"
+                │   ├── /sales         → SalesPage
+                │   ├── /sales/:id     → ProductDetailPage type="sale"
+                │   ├── /about         → AboutPage
+                │   ├── /contact       → ContactPage
+                │   └── /admin         → AdminLayout (gated by sessionStorage)
+                │       ├── index      → AdminDashboard
+                │       ├── products   → AdminProductsPage
+                │       └── invoice    → AdminInvoicePage
+                └── <Footer />
 ```
 
-Reusable shared components to build in `src/components/`:
-- `<Navbar />` — upgrade existing; add React Router `<Link>` handlers, hamburger menu for mobile
-- `<Footer />` — contact info, social links, quick nav links
-- `<ProductCard />` — shared card used in both Rentals and Sales grids (variant prop: `"rental"` | `"sale"`)
-- `<Breadcrumb />` — shared breadcrumb trail
-- `<Button />` — primary / secondary / tertiary variants
-- `<CategorySidebar />` — filter + sort panel used on Rentals and Sales pages
+### Data flow — products
 
----
+`ProductsContext` (`src/context/ProductsContext.jsx`) is the single source of truth for products at runtime.
 
-## Brand & Design System
+- On mount it fetches `/api/products.php?type=rental` and `?type=sale`, then **polls every 30 seconds** so the storefront reflects admin edits without a manual refresh. Be mindful: changes will appear on a delay, not instantly.
+- `addProduct`, `updateProduct`, `deleteProduct` send `X-Api-Key: ADMIN_PASSWORD` and re-fetch on success.
+- `src/data/products.js` is a **legacy static catalog** — it is no longer imported and should not be edited as a way to change live products. The live catalog lives in MySQL.
 
-### Color Palette (use CSS custom properties)
-```css
-:root {
-    --color-primary:        #1e3a8a; /* Navy Blue */
-    --color-secondary:      #f97316; /* Orange */
-    --color-accent:         #14b8a6; /* Teal */
-    --color-success:        #10b981; /* Green */
-    --color-error:          #ef4444; /* Red */
-    --color-gray-dark:      #1f2937;
-    --color-gray-mid:       #6b7280;
-    --color-gray-light:     #f3f4f6;
-    --color-white:          #ffffff;
-}
-```
+### Data flow — cart & checkout
 
-### Typography
-- **Headings:** Montserrat Bold or Poppins SemiBold (import from Google Fonts)
-- **Body:** Inter Regular or Open Sans
-- **UI / forms:** system font stack
+`CartContext` (`src/context/CartContext.jsx`) holds an in-memory `[{ product, qty }]` array via `useReducer`. **The cart does not persist** — a refresh empties it. If you add persistence, do it in this provider.
 
-| Token | Size | Usage |
-|-------|------|-------|
-| H1 | 48px / 3rem | Page titles |
-| H2 | 36px / 2.25rem | Section headers |
-| H3 | 28px / 1.75rem | Subsections |
-| H4 | 24px / 1.5rem | Card titles |
-| Body | 16px / 1rem | Default text |
-| Small | 14px / 0.875rem | Captions, labels |
-| Tiny | 12px / 0.75rem | Fine print |
+`CartDrawer` builds a WhatsApp message and opens `https://wa.me/${CEO_WHATSAPP}?text=...`. The number lives in `src/config.js`.
 
-### Spacing
-- Section vertical padding: `80px`
-- Internal section padding: `40px`
+### Admin auth — the two-key invariant
 
-### Component Tokens
+Admin auth is **deliberately weak** (single shared password). Two values **must stay in sync**:
 
-**Buttons**
-```
-Primary:   solid --color-primary background, white text
-Secondary: outlined, --color-primary border
-Tertiary:  text-only, colored text
-Heights:   32px (sm) | 40px (md) | 48px (lg)
-Border-radius: 6px
-Hover: darken/lighten 10%
-```
+| Where | Constant |
+|-------|----------|
+| `src/config.js` | `ADMIN_PASSWORD` — gates the login modal in `AdminLayout`, sent as `X-Api-Key` header on write requests |
+| `api/config.php` | `API_KEY` — checked by `requireApiKey()` in `api/products.php` and `api/upload.php` |
 
-**Cards**
-```
-Border:        1px solid #e5e7eb
-Border-radius: 8px
-Shadow:        0 1px 3px rgba(0,0,0,0.1)
-Hover:         elevated shadow + scale(1.02)
-Padding:       20px
-```
+If you rotate one, rotate both. Auth state is `sessionStorage.adminAuth === 'true'` — survives nav but not a tab close. `/admin` is not linked from the public nav.
 
-**Form inputs**
-```
-Height:       44px
-Border:       1px solid #d1d5db
-Border-radius: 6px
-Focus:        2px border, --color-primary
-Error:        red border + message below
-```
+### Backend (`api/*.php`)
 
-**Transitions**
-```
-Duration: 200–300ms
-Easing:   ease-in-out
-Props:    transform, opacity, box-shadow
-```
+Every endpoint includes `cors.php` (sets JSON + permissive CORS headers, handles OPTIONS preflight) and `config.php` (DB credentials + `db()` singleton + `API_KEY`).
 
-### Responsive Breakpoints
-| Name | Range |
-|------|-------|
-| Mobile | < 768px |
-| Tablet | 768px – 1199px |
-| Desktop | 1200px+ |
+- `api/products.php` — GET (list by `?type=rental|sale`, or single by `?id=`), POST/PUT/DELETE (require API key). On PUT it deletes and re-inserts all `product_images` + `product_specs` for that product.
+- `api/upload.php` — POST multipart `image` field, returns `{ url: '/uploads/products/<file>' }`. Validates MIME from file content (not the client header), 5 MB cap. Uploaded files land in `<docroot>/uploads/products/` — make sure that directory exists and is writable when deploying.
+- `api/contact.php` — POST contact form into `contact_submissions`.
 
-- Desktop: 3–4 column grids, expanded nav
-- Tablet: 2-column grids, collapsible sidebar
-- Mobile: single column, hamburger menu, min touch target 44px
+### Database
 
----
+Schema in `database/schema.sql`, seed in `database/seed.sql`. There is **no migrations framework** — apply schema changes by editing the SQL files and re-running them by hand. Tables:
 
-## Pages & Sections
+- `products` (`id` is a varchar slug, not auto-increment; `stock` is NULL for rentals, int for sales)
+- `product_images`, `product_specs` — one-to-many, cascade-deleted with parent
+- `contact_submissions`
 
-### 1. Home Page (`/`)
+Connection settings in `api/config.php` are currently the XAMPP defaults (`root` / no password). Change before deploying.
 
-Sections in order:
-1. **Navbar** (sticky, white bg, logo 150px wide, links: Home | Rentals | Sales | About | Contact)
-2. **Hero Carousel** — full width, min-height 600px, auto-advances every 5s, arrows + dot indicators, CTA overlay text on each slide. Uses existing `<Carousel />` and images in `src/Images/Carousel/`.
-3. **Welcome Section** — heading "Welcome to BK Option Ventures", 2–3 paragraph intro, two CTA buttons: "Browse Rentals" → `/rentals`, "Shop Sales" → `/sales`
-4. **Featured Categories** — 5-card grid (Canopies, Chairs, Tables, Fans, Air Conditioners); each card shows an image + label, links to the relevant filtered rentals page. Source images from `src/Images/` subdirectories.
-5. **Why Choose Us** — 3-column icon strip: Quality | Service | Value, each with short description
-6. **Footer**
+### Image pipeline
 
-### 2. Rentals Page (`/rentals`)
+Two paths exist:
 
-Layout: sticky sidebar (250px) + main product grid.
+1. **Bundled images** (`src/Images/**`) — imported as ES modules, included in legacy `products.js` and on home/about pages. Vite fingerprints them.
+2. **Uploaded images** — admin uploads via `api/upload.php` → stored URL like `/uploads/products/product_xxx.jpg` saved in `product_images.image_url`.
 
-**Sidebar filters:**
-- Category checkboxes: Canopies, Chairs, Tables, Fans, A/C Units
-- Sort by: Popular | Price: Low–High | Price: High–Low | Name A–Z
+`src/utils/imageUtils.js` exposes `compressImage(file, maxPx, quality)` — used client-side **before** upload to keep files small.
 
-**Product grid:** 3 col desktop / 2 col tablet / 1 col mobile, with pagination or "Load More".
+## Design system (current — don't change without asking)
 
-**Rental `<ProductCard />`:**
-- 4:3 image (280×360px card)
-- Product name
-- ₦X,XXX per day
-- "View Details →" button → `/rentals/:id`
-- Hover: shadow lift + scale(1.02)
+Colors live as CSS custom properties in `src/css/global.css`. Brand palette:
 
-### 3. Sales Page (`/sales`)
+- `--color-primary: #1e3a8a` (Navy Blue)
+- `--color-secondary: #f97316` (Orange)
+- `--color-accent: #14b8a6` (Teal)
+- success `#10b981`, error `#ef4444`, plus gray scale
 
-Same layout as Rentals. Sidebar categories will differ.
+Prices format as `₦` + `Number.toLocaleString('en-NG')` (Nigerian Naira, no decimals on rentals).
 
-**Sales `<ProductCard />`:**
-- Product image + stock badge
-- Product name
-- ₦XX,XXX.XX price
-- Stock count ("In Stock: 5")
-- "Add to Cart" button — triggers cart state
+Breakpoints used in the CSS: mobile `<768px`, tablet `768–1199px`, desktop `1200px+`.
 
-**Checkout flow (no payment gateway):**
-When the user clicks "Checkout", build a pre-filled WhatsApp message and open it via `https://wa.me/<CEO_WHATSAPP_NUMBER>?text=<encoded message>`. The message must include:
-- "Hello, I'd like to order the following items:"
-- Each cart item: name, quantity, unit price, line total
-- Order total
-- A prompt for the customer to share their name and delivery address
+## Things to avoid
 
-Store the CEO's WhatsApp number in a single constant (e.g. `src/config.js`) so it is easy to update:
-```js
-// src/config.js
-export const CEO_WHATSAPP = '2348XXXXXXXXX'; // number only, no +, no spaces
-```
-
-Example generated URL:
-```
-https://wa.me/2348XXXXXXXXX?text=Hello%2C%20I%27d%20like%20to%20order%3A%0A...
-```
-
-The cart UI (slide-out drawer or dedicated `/cart` page) should show:
-- Item list with quantities and prices
-- Subtotal
-- "Checkout via WhatsApp" button (green, WhatsApp icon) — opens the link in a new tab
-
-### 4. Product Detail Page (`/rentals/:id` and `/sales/:id`)
-
-Layout: two-column (image left, info right) + tabs + related products.
-
-- **Image gallery:** main 600×600px + thumbnail strip (100×100px each, 4–6 images)
-- **Info panel (400px):** product name (H1), star rating, price, specs list, rental details (min 1 day, delivery, setup), "Book Now / Buy" CTA button, "Contact for Quote" link
-- **Tabs:** Description | Specifications | Reviews — underline active state, smooth transition
-- **Related products:** 4-card row ("You might also like…")
-- **Breadcrumb:** Home > Rentals/Sales > Category > Product Name
-
-### 5. About Page (`/about`)
-
-Sections in order:
-1. Hero with background image + overlay: "About BK Option Ventures"
-2. Our Story — company history (timeline or narrative)
-3. Mission & Vision — two-column card layout
-4. Our Team — photo grid (name + title under each)
-5. Why Choose Us — bullet list of differentiators (quality, service, pricing, on-time delivery)
-
-### 6. Contact Page (`/contact`)
-
-Two-column layout: form left, info right.
-
-**Form fields:** Name*, Email*, Phone, Message* — with real-time validation, clear error states, success confirmation on submit.
-
-**Info panel:**
-- 📍 Address
-- 📞 Phone: +234 XXX XXX XXXX
-- ✉️ Email: info@bkoption.com
-- 🕐 Hours: Mon–Fri 8AM–6PM | Sat 9AM–4PM | Sun Closed
-- Social media icons
-
-**Below:** full-width embedded Google Map (400px height).
-
-### 7. CEO Invoice Dashboard (`/admin`)
-
-Password-protected route — redirect to login if unauthenticated. Do not expose this route in the public navbar.
-
-**Sections:**
-1. **Customer Information** — Name*, Email, Phone*, Address
-2. **Invoice Details** — Auto-generated Invoice # (`INV-YYYY-XXXX`), Date, Due Date
-3. **Line Items table** — searchable product dropdown, Qty, Unit Price, auto-calculated line total. Products list:
-    - Canopy – Small (10×10)
-    - Canopy – Large (20×20)
-    - Chairs – Plastic
-    - Chairs – Banquet
-    - Tables – Round
-    - Tables – Rectangular
-    - Standing Fan
-    - Air Conditioner Unit
-    - [+ Add Custom Item]
-4. **Pricing Summary** — Subtotal, Tax (7.5%), **Total** — all auto-calculated in real time
-5. **Payment Status** dropdown — Pending | Partially Paid | Paid | Overdue
-6. **Notes & Terms** — free-text fields; default terms: "Payment due within 7 days. Late payments subject to 5% monthly interest charge."
-7. **Action buttons** — Preview Invoice | Save Draft | Generate (PDF download)
-8. **Recent Invoices table** — INV# | Customer | Date | Amount | Status
-
-**Invoice PDF output must include:**
-- BK Option Ventures logo + address + phone
-- Bill To section
-- Invoice # and dates
-- Itemized line items table
-- Subtotal / Tax / Total
-- Payment status
-- Terms & Conditions
-- "Thank you for your business!"
-
-Use **jsPDF** or **PDFMake** for PDF generation.
-
----
-
-## Key Features Checklist
-
-| Feature | Notes |
-|---------|-------|
-| React Router | Client-side routing for all pages |
-| Navbar upgrade | Add `<Link>` handlers, active state, hamburger menu |
-| Hero Carousel | Already exists — add CTA overlays |
-| Category filter + sort | Rentals & Sales sidebar |
-| Shopping Cart | Global state (Context or Zustand) for Sales items |
-| WhatsApp Checkout | On checkout, redirect to CEO WhatsApp with cart summary pre-filled in message |
-| Booking system | Date picker + availability check for Rentals |
-| Product detail | Image gallery, tabs, related products |
-| Admin auth | Password-protected `/admin` route |
-| Invoice generation | jsPDF or PDFMake, branded output |
-| Contact form | Validation, success state, EmailJS or backend |
-| Analytics | Google Analytics or Plausible |
-| Accessibility | WCAG AA contrast, focus indicators, alt text, ARIA labels, semantic HTML |
-
----
-
-## Image Guidelines
-
-| Type | Format | Dimensions |
-|------|--------|------------|
-| Product images | JPG / WebP | 800×800px min, white/neutral bg, 4–6 angles |
-| Hero / banner | JPG / WebP | 1920×800px, compressed |
-| Icons | SVG | 24px standard, scalable |
-
-Existing image folders in `src/Images/`: `Carousel/`, `ChairTableSets/`, `EventSets/`, `Tents/`, `Logo/`, `Videos/`
-
----
-
-## Suggested Package Additions
-
-```bash
-npm install react-router-dom          # routing
-npm install jspdf jspdf-autotable     # invoice PDF generation
-npm install react-hook-form           # form handling + validation
-npm install swiper                    # carousel enhancement (optional)
-```
-
-No payment gateway package is needed. Checkout is handled entirely via a WhatsApp deep link — no backend or third-party SDK required.
+- Don't edit `src/data/products.js` to change live catalog data — it's not loaded at runtime. Use the admin UI or the DB.
+- Don't add image imports to admin-managed products — those flow through `api/upload.php` and end up as URL strings, not module references.
+- Don't change `ADMIN_PASSWORD` without also changing `API_KEY` in `api/config.php`.
+- Don't assume the cart persists across refreshes — it doesn't.
+- Don't expect admin edits to appear instantly on the storefront — the products context polls every 30 s.

@@ -181,6 +181,60 @@
   color: var(--color-gray-mid);
   white-space: nowrap;
 }
+.summary-pct-note {
+  font-size: 0.78rem;
+  color: var(--color-gray-mid);
+  font-style: italic;
+  white-space: nowrap;
+}
+.summary-charge-input:disabled {
+  background: var(--color-gray-light);
+  color: var(--color-gray-mid);
+  cursor: not-allowed;
+}
+
+/* Desktop: lay the pricing summary out horizontally as cards */
+@media (min-width: 1200px) {
+  .pricing-summary .summary-rows {
+    max-width: none;
+    margin-left: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .pricing-summary .summary-row {
+    flex: 1 1 0;
+    min-width: 180px;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  .pricing-summary .summary-row > span {
+    color: var(--color-gray-mid);
+    font-size: 0.85rem;
+  }
+  .pricing-summary .summary-row strong {
+    font-size: 1.05rem;
+  }
+  .pricing-summary .total-row {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+  .pricing-summary .total-row span,
+  .pricing-summary .total-row strong {
+    color: var(--color-white);
+  }
+  /* keep the charge input from stretching the card */
+  .pricing-summary .summary-charge-input {
+    width: 100%;
+    max-width: 150px;
+  }
+}
 
 /* Actions */
 .admin-actions {

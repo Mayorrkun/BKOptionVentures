@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { CEO_WHATSAPP } from '../config.js';
 import '../css/contact.css';
 
 export default function ContactPage() {
@@ -136,7 +137,13 @@ export default function ContactPage() {
               <div className="social-row">
                 <a href="#" aria-label="Facebook" className="social-btn">📘 Facebook</a>
                 <a href="#" aria-label="Instagram" className="social-btn">📸 Instagram</a>
-                <a href="#" aria-label="WhatsApp" className="social-btn">💬 WhatsApp</a>
+                <a
+                  href={`https://wa.me/${CEO_WHATSAPP}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="WhatsApp"
+                  className="social-btn"
+                >💬 WhatsApp</a>
               </div>
             </div>
           </div>

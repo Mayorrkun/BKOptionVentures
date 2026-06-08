@@ -13,7 +13,9 @@ npm run lint      # ESLint (flat config)
 
 There is no test runner configured.
 
-The frontend expects the PHP API at `/api/*.php`. In dev, run PHP separately (XAMPP/MAMP/`php -S`) and either point Vite at it via a proxy or serve `dist/` from the same docroot. In production, both ship to the same domain (typical LAMP host).
+The frontend expects the PHP API at `/api/*.php`. `vite.config.js` already proxies `/api` → `http://localhost`, so in dev just run PHP separately on port 80 (XAMPP/MAMP) and `npm run dev` will forward API calls to it. In production, frontend and API ship to the same domain (typical LAMP host).
+
+**Deployment caveat:** `vercel.json` (SPA fallback rewrites) is committed, but Vercel serves only the static `dist/` — it cannot run the PHP API. A Vercel deploy gives you a frontend with no working backend. Real deployment is a LAMP host serving both `dist/` and `api/` from one docroot.
 
 ## Stack
 

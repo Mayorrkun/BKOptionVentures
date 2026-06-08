@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useProducts } from '../context/ProductsContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import Breadcrumb from '../components/Breadcrumb.jsx';
@@ -17,15 +17,35 @@ export default function ProductDetailPage({ type }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { rentalProducts, salesProducts } = useProducts();
+  const { rentalProducts, salesProducts, loading } = useProducts();
 
   const products = type === 'rental' ? rentalProducts : salesProducts;
   const product = products.find(p => p.id === id);
 
   const [mainImg, setMainImg] = useState(0);
   const [activeTab, setActiveTab] = useState('Description');
+  const [added, setAdded] = useState(false);
+  const timerRef = useRef(null);
 
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const handleAdd = () => {
+    addToCart(product);
+    setAdded(true);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setAdded(false), 1500);
+  };
+
+  // Products load asynchronously — show a loading state instead of a
+  // premature "not found" flash on a hard refresh or shared deep link.
   if (!product) {
+    if (loading) {
+      return (
+        <div className="container" style={{ padding: '80px 24px', textAlign: 'center' }}>
+          <h2>Loading…</h2>
+        </div>
+      );
+    }
     return (
       <div className="container" style={{ padding: '80px 24px', textAlign: 'center' }}>
         <h2>Product not found</h2>
@@ -96,22 +116,16 @@ export default function ProductDetailPage({ type }) {
             )}
 
             <div className="detail-actions">
-              {type === 'sale'
-                ? <button
-                    className="btn btn-primary btn-lg"
-                    onClick={() => addToCart(product)}
-                    disabled={product.stock === 0}
-                  >
-                    Add to Cart
-                  </button>
-                : <button
-                      className="btn btn-primary btn-lg"
-                      onClick={() => addToCart(product)}
-                  >
-                      Add to Cart
-                  </button>
-              }
-              <a href="/contact" className="btn btn-secondary btn-lg">Contact for Quote</a>
+              <button
+                className={`btn btn-lg ${added ? 'btn-success' : 'btn-primary'}`}
+                onClick={handleAdd}
+                disabled={type === 'sale' && product.stock === 0}
+              >
+                {type === 'sale' && product.stock === 0
+                  ? 'Out of Stock'
+                  : added ? 'Added ✓' : 'Add to Cart'}
+              </button>
+              <Link to="/contact" className="btn btn-secondary btn-lg">Contact for Quote</Link>
             </div>
           </div>
         </div>
@@ -135,9 +149,11 @@ export default function ProductDetailPage({ type }) {
               <p>{product.description}</p>
             )}
             {activeTab === 'Specifications' && (
-              <ul className="spec-list">
-                {product.specs.map((s, i) => <li key={i}>✓ {s}</li>)}
-              </ul>
+              (product.specs || []).length > 0
+                ? <ul className="spec-list">
+                    {product.specs.map((s, i) => <li key={i}>✓ {s}</li>)}
+                  </ul>
+                : <p>No specifications listed for this product.</p>
             )}
             {activeTab === 'Reviews' && (
               <div className="reviews-list">

@@ -4,7 +4,6 @@ import '../css/carousel.css';
 import slide1 from '../Images/Carousel/event1.jpeg';
 import slide2 from '../Images/Carousel/event2.jpeg';
 import slide3 from '../Images/Carousel/event3.jpeg';
-import slide4 from '../Images/Carousel/tent1.jpeg';
 import slide5 from '../Images/Carousel/tent2.jpeg';
 
 const slides = [

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { CEO_WHATSAPP } from '../config.js';
 import '../css/footer.css';
 
 export default function Footer() {
@@ -33,7 +34,12 @@ export default function Footer() {
           <div className="social-links">
             <a href="#" aria-label="Facebook">📘</a>
             <a href="#" aria-label="Instagram">📸</a>
-            <a href="#" aria-label="WhatsApp">💬</a>
+            <a
+              href={`https://wa.me/${CEO_WHATSAPP}`}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="WhatsApp"
+            >💬</a>
           </div>
         </div>
       </div>

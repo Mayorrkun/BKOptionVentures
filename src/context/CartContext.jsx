@@ -1,6 +1,18 @@
-import { createContext, useContext, useReducer, useState } from 'react';
+import { createContext, useContext, useReducer, useState, useEffect } from 'react';
 
 const CartContext = createContext(null);
+
+const STORAGE_KEY = 'bkCart';
+
+function loadCart() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 function cartReducer(state, action) {
   switch (action.type) {
@@ -29,8 +41,17 @@ function cartReducer(state, action) {
 }
 
 export function CartProvider({ children }) {
-  const [cart, dispatch] = useReducer(cartReducer, []);
+  const [cart, dispatch] = useReducer(cartReducer, undefined, loadCart);
   const [cartOpen, setCartOpen] = useState(false);
+
+  // Persist cart so it survives a refresh
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+    } catch {
+      /* storage unavailable (private mode / quota) — ignore */
+    }
+  }, [cart]);
 
   const addToCart = product => dispatch({ type: 'ADD', product });
   const removeFromCart = id => dispatch({ type: 'REMOVE', id });

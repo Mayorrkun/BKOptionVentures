@@ -9,9 +9,6 @@ const DEFAULT_TERMS =
 
 const DRAFT_KEY = 'invoiceDraft';
 
-// Round to 2 decimals, avoiding binary float drift (e.g. 0.1 + 0.2).
-const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
-
 const emptyLineItem = id => ({ id, description: '', qty: 0, unitPrice: 0, days: [] });
 
 const CUSTOMER_FIELDS = [
@@ -50,8 +47,15 @@ function dueDateStr() {
   return d.toISOString().split('T')[0];
 }
 
+// Invoice amounts are shown as whole Naira (no kobo).
 function formatPrice(p) {
-  return '₦' + (p || 0).toLocaleString('en-NG');
+  return '₦' + Math.round(p || 0).toLocaleString('en-NG');
+}
+
+// jsPDF's built-in Helvetica is Latin-1 only and has no ₦ glyph (it renders as a
+// broken bar), so the PDF uses the "NGN" ISO code instead.
+function formatPricePdf(p) {
+  return 'NGN ' + Math.round(p || 0).toLocaleString('en-NG');
 }
 
 function statusBadgeColor(status) {
@@ -175,6 +179,8 @@ export default function AdminInvoicePage() {
   const [invoiceNo, setInvoiceNo] = useState(generateInvoiceNumber);
   const [invoiceDate, setInvoiceDate] = useState(todayStr);
   const [dueDate, setDueDate] = useState(dueDateStr);
+  const [eventDate, setEventDate] = useState('');
+  const [setupDate, setSetupDate] = useState('');
   const [lineItems, setLineItems] = useState([emptyLineItem(1)]);
   const [status, setStatus] = useState('Pending');
   const [notes, setNotes] = useState('');
@@ -200,12 +206,14 @@ export default function AdminInvoicePage() {
   const discountActive = +discount > 0;
   const serviceActive  = !discountActive && +serviceCharge > 0;
 
-  const discountAmount      = discountActive ? round2(subtotalRaw * (+discount || 0) / 100) : 0;
-  const taxableBase         = round2(subtotalRaw - discountAmount); // discount comes off before tax
-  const tax                 = round2(taxableBase * 0.075);
-  const serviceChargeAmount = serviceActive ? round2(subtotalRaw * (+serviceCharge || 0) / 100) : 0;
-  const transportAmount     = round2(+transportation || 0);
-  const total               = round2(taxableBase + tax + serviceChargeAmount + transportAmount);
+  // Invoice money is whole Naira: round each component so the displayed charges
+  // always sum to the grand total (and the words / Naira line stay in step).
+  const discountAmount      = discountActive ? Math.round(subtotalRaw * (+discount || 0) / 100) : 0;
+  const taxableBase         = Math.round(subtotalRaw - discountAmount); // discount comes off before tax
+  const tax                 = Math.round(taxableBase * 0.075);
+  const serviceChargeAmount = serviceActive ? Math.round(subtotalRaw * (+serviceCharge || 0) / 100) : 0;
+  const transportAmount     = Math.round(+transportation || 0);
+  const total               = taxableBase + tax + serviceChargeAmount + transportAmount;
 
   const addLine = () => {
     setLineItems(prev => [...prev, emptyLineItem(nextId)]);
@@ -329,7 +337,7 @@ export default function AdminInvoicePage() {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...INK);
       doc.text(doc.splitTextToSize(customer.name || '—', valW)[0], midX + labelOff, itY);
-      itY += 6;
+      itY += 5;
 
       if (customer.email) {
         doc.setFont('helvetica', 'bold');
@@ -338,7 +346,7 @@ export default function AdminInvoicePage() {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...INK);
         doc.text(doc.splitTextToSize(customer.email, valW)[0], midX + labelOff, itY);
-        itY += 6;
+        itY += 5;
       }
 
       if (customer.phone) {
@@ -348,9 +356,10 @@ export default function AdminInvoicePage() {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...INK);
         doc.text(customer.phone, midX + labelOff, itY);
-        itY += 6;
+        itY += 5;
       }
 
+      let issuedToBottom = itY;
       if (customer.address) {
         // "Delivery Address:" is too wide to sit inline, so label on top, value beneath.
         doc.setFont('helvetica', 'bold');
@@ -360,6 +369,7 @@ export default function AdminInvoicePage() {
         doc.setTextColor(...INK);
         const splitAddr = doc.splitTextToSize(customer.address, PAGE_W - 12 - midX);
         doc.text(splitAddr, midX, itY + 5);
+        issuedToBottom = itY + 5 + splitAddr.length * 4;
       }
 
       // ── Payment status badge ──
@@ -371,65 +381,93 @@ export default function AdminInvoicePage() {
       doc.setTextColor(255, 255, 255);
       doc.text(status.toUpperCase(), PAGE_W - 34, 69.5, { align: 'center' });
 
+      // ── Event / Set-up date band (sits just above the table, below the header blocks) ──
+      const bandY = Math.max(82, issuedToBottom) + 8;
+
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...NAVY);
+      doc.text('Date of Event:', 12, bandY);
+      const evLblW = doc.getTextWidth('Date of Event:');
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...INK);
+      doc.text(eventDate || '—', 12 + evLblW + 2, bandY);
+
+      const suVal = setupDate || '—';
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...INK);
+      doc.text(suVal, PAGE_W - 12, bandY, { align: 'right' });
+      const suValW = doc.getTextWidth(suVal);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...NAVY);
+      doc.text('Set Up Date:', PAGE_W - 12 - suValW - 2, bandY, { align: 'right' });
+
+      doc.setDrawColor(...MUTED);
+      doc.setLineWidth(0.2);
+      doc.line(12, bandY + 3, PAGE_W - 12, bandY + 3);
+
       // ── Line items table ──
       // margin.bottom reserves the footer strip; autoTable paginates the rows itself,
       // and didDrawPage stamps the footer on every page it creates.
       autoTable(doc, {
-        startY: 90,
+        startY: bandY + 8,
         head: [['S/N', 'DESCRIPTION', 'QTY', 'RATE', 'TOTAL']],
         body: lineItems.flatMap((item, idx) => [
           [
             idx + 1,
             item.description || '—',
             item.qty,
-            item.unitPrice.toLocaleString('en-NG'),
-            (item.qty * item.unitPrice).toLocaleString('en-NG'),
+            Math.round(item.unitPrice).toLocaleString('en-NG'),
+            Math.round(item.qty * item.unitPrice).toLocaleString('en-NG'),
           ],
           // Day sub-rows: gray italic, labels derived from index to match the form
           ...(item.days || []).map((day, di) => [
             { content: '', styles: { fillColor: [245, 246, 248] } },
-            { content: `  └ Day ${di + 2}`, styles: { fontStyle: 'italic', textColor: [110, 115, 130], fillColor: [245, 246, 248] } },
+            { content: `   - Day ${di + 2}`, styles: { fontStyle: 'italic', textColor: [110, 115, 130], fillColor: [245, 246, 248] } },
             { content: '', styles: { fillColor: [245, 246, 248] } },
             { content: '', styles: { fillColor: [245, 246, 248] } },
-            { content: (+day.amount || 0).toLocaleString('en-NG'), styles: { halign: 'left', textColor: [110, 115, 130], fillColor: [245, 246, 248], fontStyle: 'italic' } },
+            { content: Math.round(+day.amount || 0).toLocaleString('en-NG'), styles: { halign: 'left', textColor: [110, 115, 130], fillColor: [245, 246, 248], fontStyle: 'italic' } },
           ]),
         ]),
         foot: [
           ...(discountActive ? [[
             { content: '', colSpan: 3 },
             { content: `Discount (${discount}%)`, styles: { halign: 'right', fontStyle: 'normal', fillColor: GREY_BG, textColor: SLATE } },
-            { content: '- ' + formatPrice(discountAmount), styles: { halign: 'left', fillColor: GREY_BG, textColor: SLATE, fontSize: 8 } },
+            { content: '- ' + formatPricePdf(discountAmount), styles: { halign: 'left', fillColor: GREY_BG, textColor: SLATE, fontSize: 8 } },
           ]] : []),
           [
             { content: '', colSpan: 3 },
             { content: 'Tax (7.5%)', styles: { halign: 'right', fontStyle: 'normal', fillColor: GREY_BG, textColor: SLATE } },
-            { content: formatPrice(tax), styles: { halign: 'left', fillColor: GREY_BG, textColor: SLATE, fontSize: 8 } },
+            { content: formatPricePdf(tax), styles: { halign: 'left', fillColor: GREY_BG, textColor: SLATE, fontSize: 8 } },
           ],
           ...(serviceActive ? [[
             { content: '', colSpan: 3 },
             { content: `Service Charge (${serviceCharge}%)`, styles: { halign: 'right', fontStyle: 'normal', fillColor: GREY_BG, textColor: SLATE } },
-            { content: formatPrice(serviceChargeAmount), styles: { halign: 'left', fillColor: GREY_BG, textColor: SLATE, fontSize: 8 } },
+            { content: formatPricePdf(serviceChargeAmount), styles: { halign: 'left', fillColor: GREY_BG, textColor: SLATE, fontSize: 8 } },
           ]] : []),
           ...(transportAmount > 0 ? [[
             { content: '', colSpan: 3 },
             { content: 'Transportation', styles: { halign: 'right', fontStyle: 'normal', fillColor: GREY_BG, textColor: SLATE } },
-            { content: formatPrice(transportAmount), styles: { halign: 'left', fillColor: GREY_BG, textColor: SLATE, fontSize: 8 } },
+            { content: formatPricePdf(transportAmount), styles: { halign: 'left', fillColor: GREY_BG, textColor: SLATE, fontSize: 8 } },
           ]] : []),
           [
             { content: 'GRAND TOTAL', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: NAVY, textColor: [255, 255, 255], fontSize: 10 } },
-            { content: formatPrice(total), styles: { halign: 'left', fontStyle: 'bold', fillColor: NAVY, textColor: [255, 255, 255], fontSize: 10 } },
+            { content: formatPricePdf(total), styles: { halign: 'left', fontStyle: 'bold', fillColor: NAVY, textColor: [255, 255, 255], fontSize: 10 } },
           ],
         ],
         styles: { fontSize: 9, cellPadding: { top: 2, bottom: 2, left: 5, right: 5 }, textColor: INK },
         headStyles: { fillColor: NAVY, textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
         footStyles: { fontSize: 9 },
+        showFoot: 'lastPage', // totals print once, on the final page of the table
+
         alternateRowStyles: { fillColor: [248, 249, 252] },
+        // Widths sum to 186mm = 210 page − 24 (12mm margins) so nothing overflows.
         columnStyles: {
-          0: { cellWidth: 20, halign: 'center' },
-          1: { cellWidth: 52 },
-          2: { cellWidth: 20, halign: 'center' },
-          3: { cellWidth: 45, halign: 'left' },
-          4: { cellWidth: 60, halign: 'left' },
+          0: { cellWidth: 16, halign: 'center' },
+          1: { cellWidth: 58 },
+          2: { cellWidth: 16, halign: 'center' },
+          3: { cellWidth: 42, halign: 'left' },
+          4: { cellWidth: 54, halign: 'left' },
         },
         margin: { top: 22, bottom: 22, left: 12, right: 12 },
         didDrawPage: drawFooter,
@@ -526,7 +564,7 @@ export default function AdminInvoicePage() {
   };
 
   const saveDraft = () => {
-    const draft = { customer, invoiceNo, invoiceDate, dueDate, lineItems, status, notes, terms, serviceCharge, discount, transportation };
+    const draft = { customer, invoiceNo, invoiceDate, dueDate, eventDate, setupDate, lineItems, status, notes, terms, serviceCharge, discount, transportation };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     setHasDraft(true);
     alert('Draft saved!');
@@ -541,6 +579,8 @@ export default function AdminInvoicePage() {
       if (d.invoiceNo) setInvoiceNo(d.invoiceNo);
       setInvoiceDate(d.invoiceDate || todayStr());
       setDueDate(d.dueDate || dueDateStr());
+      setEventDate(d.eventDate ?? '');
+      setSetupDate(d.setupDate ?? '');
       const items = Array.isArray(d.lineItems) && d.lineItems.length
         ? d.lineItems
         : [emptyLineItem(1)];
@@ -599,6 +639,14 @@ export default function AdminInvoicePage() {
             <div className="form-group">
               <label>Due Date</label>
               <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Date of Event</label>
+              <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Set Up Date</label>
+              <input type="date" value={setupDate} onChange={e => setSetupDate(e.target.value)} />
             </div>
           </div>
         </section>

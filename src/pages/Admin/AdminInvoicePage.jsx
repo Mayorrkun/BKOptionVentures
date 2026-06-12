@@ -188,6 +188,7 @@ export default function AdminInvoicePage() {
   const [nextId, setNextId] = useState(2);
   const [serviceCharge, setServiceCharge] = useState(''); // percentage, e.g. 10 = 10%
   const [discount, setDiscount] = useState('');           // percentage; mutually exclusive with service charge
+  const [taxRate, setTaxRate] = useState('7.5');          // percentage; editable, defaults to Nigerian VAT
   const [transportation, setTransportation] = useState('');
   const [pdfLoading, setPdfLoading] = useState(false);
   const [hasDraft, setHasDraft] = useState(() => !!localStorage.getItem(DRAFT_KEY));
@@ -202,15 +203,14 @@ export default function AdminInvoicePage() {
     }, 0),
   [lineItems]);
 
-  // Discount and service charge are mutually exclusive — a discount wins.
   const discountActive = +discount > 0;
-  const serviceActive  = !discountActive && +serviceCharge > 0;
+  const serviceActive  = +serviceCharge > 0;
 
   // Invoice money is whole Naira: round each component so the displayed charges
   // always sum to the grand total (and the words / Naira line stay in step).
   const discountAmount      = discountActive ? Math.round(subtotalRaw * (+discount || 0) / 100) : 0;
   const taxableBase         = Math.round(subtotalRaw - discountAmount); // discount comes off before tax
-  const tax                 = Math.round(taxableBase * 0.075);
+  const tax                 = Math.round(taxableBase * (+taxRate || 0) / 100);
   const serviceChargeAmount = serviceActive ? Math.round(subtotalRaw * (+serviceCharge || 0) / 100) : 0;
   const transportAmount     = Math.round(+transportation || 0);
   const total               = taxableBase + tax + serviceChargeAmount + transportAmount;
@@ -437,7 +437,7 @@ export default function AdminInvoicePage() {
           ]] : []),
           [
             { content: '', colSpan: 3 },
-            { content: 'Tax (7.5%)', styles: { halign: 'right', fontStyle: 'normal', fillColor: GREY_BG, textColor: SLATE } },
+            { content: `Tax (${+taxRate || 0}%)`, styles: { halign: 'right', fontStyle: 'normal', fillColor: GREY_BG, textColor: SLATE } },
             { content: formatPricePdf(tax), styles: { halign: 'left', fillColor: GREY_BG, textColor: SLATE, fontSize: 8 } },
           ],
           ...(serviceActive ? [[
@@ -564,7 +564,7 @@ export default function AdminInvoicePage() {
   };
 
   const saveDraft = () => {
-    const draft = { customer, invoiceNo, invoiceDate, dueDate, eventDate, setupDate, lineItems, status, notes, terms, serviceCharge, discount, transportation };
+    const draft = { customer, invoiceNo, invoiceDate, dueDate, eventDate, setupDate, lineItems, status, notes, terms, serviceCharge, discount, taxRate, transportation };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     setHasDraft(true);
     alert('Draft saved!');
@@ -590,6 +590,7 @@ export default function AdminInvoicePage() {
       setTerms(d.terms ?? DEFAULT_TERMS);
       setServiceCharge(d.serviceCharge ?? '');
       setDiscount(d.discount ?? '');
+      setTaxRate(d.taxRate ?? '7.5');
       setTransportation(d.transportation ?? '');
       const maxId = items.reduce((m, i) => typeof i.id === 'number' ? Math.max(m, i.id) : m, 1);
       setNextId(maxId + 1);
@@ -698,17 +699,27 @@ export default function AdminInvoicePage() {
                   onChange={e => setDiscount(e.target.value)}
                   className="summary-charge-input"
                   placeholder="0"
-                  disabled={+serviceCharge > 0}
-                  title={+serviceCharge > 0 ? 'Remove the service charge to apply a discount' : ''}
                 />
                 {discountActive && (
                   <span className="summary-pct-computed">− {formatPrice(discountAmount)}</span>
                 )}
               </div>
             </div>
-            <div className="summary-row">
-              <span>Tax (7.5%){discountActive ? ' on discounted subtotal' : ''}</span>
-              <strong>{formatPrice(tax)}</strong>
+            <div className="summary-row summary-input-row">
+              <span>Tax (%){discountActive ? ' on discounted subtotal' : ''}</span>
+              <div className="summary-pct-group">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.1"
+                  value={taxRate}
+                  onChange={e => setTaxRate(e.target.value)}
+                  className="summary-charge-input"
+                  placeholder="0"
+                />
+                <span className="summary-pct-computed">= {formatPrice(tax)}</span>
+              </div>
             </div>
             <div className="summary-row summary-input-row">
               <span>Service Charge (%)</span>
@@ -721,14 +732,9 @@ export default function AdminInvoicePage() {
                   onChange={e => setServiceCharge(e.target.value)}
                   className="summary-charge-input"
                   placeholder="0"
-                  disabled={discountActive}
-                  title={discountActive ? 'Service charge does not apply when a discount is set' : ''}
                 />
                 {serviceActive && (
                   <span className="summary-pct-computed">= {formatPrice(serviceChargeAmount)}</span>
-                )}
-                {discountActive && (
-                  <span className="summary-pct-note">Not applied while a discount is set</span>
                 )}
               </div>
             </div>

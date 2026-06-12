@@ -181,17 +181,6 @@
   color: var(--color-gray-mid);
   white-space: nowrap;
 }
-.summary-pct-note {
-  font-size: 0.78rem;
-  color: var(--color-gray-mid);
-  font-style: italic;
-  white-space: nowrap;
-}
-.summary-charge-input:disabled {
-  background: var(--color-gray-light);
-  color: var(--color-gray-mid);
-  cursor: not-allowed;
-}
 
 /* Desktop: lay the pricing summary out horizontally as cards */
 @media (min-width: 1200px) {

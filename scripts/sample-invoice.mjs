@@ -60,7 +60,7 @@ function renderInvoice(data, outPath) {
   }, 0);
 
   const discountActive = +discount > 0;
-  const serviceActive  = !discountActive && +serviceCharge > 0;
+  const serviceActive  = +serviceCharge > 0;
   const discountAmount      = discountActive ? Math.round(subtotalRaw * (+discount || 0) / 100) : 0;
   const taxableBase         = Math.round(subtotalRaw - discountAmount);
   const tax                 = Math.round(taxableBase * 0.075);
